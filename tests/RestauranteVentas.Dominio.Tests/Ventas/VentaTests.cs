@@ -42,11 +42,11 @@ public class VentaTests
     {
         var venta = CrearVentaAbierta();
         var producto = CrearProducto("Ensalada", 8m);
+
+        venta.AgregarProducto(producto, Cantidad.Crear(2).Valor!);
+
         producto.CambiarNombre(NombreProducto.Crear("Ensalada César").Valor!);
         producto.ActualizarPrecio(Dinero.Crear(10m).Valor!);
-
-        var productoOriginal = CrearProducto("Ensalada", 8m);
-        venta.AgregarProducto(productoOriginal, Cantidad.Crear(2).Valor!);
 
         var detalle = venta.Detalles.Single();
         Assert.Equal("Ensalada", detalle.NombreHistorico.Valor);
@@ -165,6 +165,25 @@ public class VentaTests
 
         Assert.False(resultado.EsExito);
         Assert.Equal(ErroresVenta.YaCancelada.Codigo, resultado.Error!.Codigo);
+    }
+
+    [Fact]
+    public void No_permite_modificar_venta_cancelada()
+    {
+        var venta = CrearVentaConProducto();
+        var detalleId = venta.Detalles.Single().Id;
+        venta.Cancelar(FechaCancelacion);
+
+        var agregar = venta.AgregarProducto(CrearProducto("Otro", 5m), Cantidad.Crear(1).Valor!);
+        var cambiar = venta.CambiarCantidad(detalleId, Cantidad.Crear(2).Valor!);
+        var eliminar = venta.EliminarDetalle(detalleId);
+
+        Assert.False(agregar.EsExito);
+        Assert.False(cambiar.EsExito);
+        Assert.False(eliminar.EsExito);
+        Assert.Equal(ErroresVenta.YaCancelada.Codigo, agregar.Error!.Codigo);
+        Assert.Equal(ErroresVenta.YaCancelada.Codigo, cambiar.Error!.Codigo);
+        Assert.Equal(ErroresVenta.YaCancelada.Codigo, eliminar.Error!.Codigo);
     }
 
     [Fact]
