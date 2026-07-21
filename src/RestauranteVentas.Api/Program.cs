@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Hosting;
 using RestauranteVentas.Api.Contratos;
 using RestauranteVentas.Api.Infraestructura;
 using RestauranteVentas.Api.Respuestas;
@@ -18,6 +19,8 @@ using RestauranteVentas.Infrastructure.Persistencia;
 
 var constructor = WebApplication.CreateBuilder(args);
 
+constructor.AddServiceDefaults();
+
 var cadenaConexion = constructor.Configuration.GetConnectionString("restauranteventas")
     ?? throw new InvalidOperationException("La cadena de conexión 'restauranteventas' no está configurada.");
 
@@ -35,8 +38,6 @@ constructor.Services.AddScoped<IComandoHandler<EliminarDetalleVentaComando, Resu
 constructor.Services.AddScoped<IComandoHandler<PagarVentaComando, ResultadoAplicacion<VentaDto>>, PagarVentaHandler>();
 constructor.Services.AddScoped<IComandoHandler<CancelarVentaComando, ResultadoAplicacion<VentaDto>>, CancelarVentaHandler>();
 
-constructor.Services.AddHealthChecks();
-
 var aplicacion = constructor.Build();
 
 await using (var alcance = aplicacion.Services.CreateAsyncScope())
@@ -45,6 +46,7 @@ await using (var alcance = aplicacion.Services.CreateAsyncScope())
     await contexto.Database.MigrateAsync();
 }
 
+aplicacion.MapDefaultEndpoints();
 aplicacion.MapHealthChecks("/health");
 
 aplicacion.MapPost("/api/productos", async (

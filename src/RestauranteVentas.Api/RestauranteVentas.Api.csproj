@@ -9,6 +9,7 @@
   <ItemGroup>
     <ProjectReference Include="..\RestauranteVentas.Aplicacion\RestauranteVentas.Aplicacion.csproj" />
     <ProjectReference Include="..\RestauranteVentas.Infrastructure\RestauranteVentas.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\RestauranteVentas.ServiceDefaults\RestauranteVentas.ServiceDefaults.csproj" />
   </ItemGroup>
 
   <ItemGroup>

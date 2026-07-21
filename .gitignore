@@ -51,6 +51,9 @@ artifacts/
 # VS Code
 .vscode/
 
+# Herramientas de agentes generadas localmente por Aspire
+.agents/
+
 # OS
 .DS_Store
 Thumbs.db

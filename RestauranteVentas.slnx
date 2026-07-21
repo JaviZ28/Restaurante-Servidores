@@ -9,4 +9,8 @@
     <Project Path="tests/RestauranteVentas.Aplicacion.Tests/RestauranteVentas.Aplicacion.Tests.csproj" />
     <Project Path="tests/RestauranteVentas.Dominio.Tests/RestauranteVentas.Dominio.Tests.csproj" />
   </Folder>
+  <Folder Name="/aspire/">
+    <Project Path="RestauranteVentas.AppHost/RestauranteVentas.AppHost.csproj" />
+    <Project Path="RestauranteVentas.ServiceDefaults/RestauranteVentas.ServiceDefaults.csproj" />
+  </Folder>
 </Solution>
