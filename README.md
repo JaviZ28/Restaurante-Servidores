@@ -1,8 +1,14 @@
-# RestauranteVentas — Dominio
+# RestauranteVentas — Dominio + Application (CQRS)
 
-Implementación del núcleo de dominio para la gestión de ventas de un restaurante, construida con DDD (Domain-Driven Design) y .NET 10.
+Implementación del núcleo de negocio y de la capa de aplicación para la gestión de ventas de un restaurante, construida con DDD (Domain-Driven Design), CQRS y .NET 10.
 
-El proyecto concentra las reglas de negocio de ventas y no depende de infraestructura, bases de datos, HTTP, Entity Framework ni paquetes externos.
+## Estado actual
+
+- `RestauranteVentas.Dominio` concentra reglas de negocio puras (sin infraestructura).
+- `RestauranteVentas.Aplicacion` orquesta casos de uso con Commands, Queries y Handlers.
+- El mapeo de entidades a DTOs se realiza de forma manual.
+- Se incluyen pruebas unitarias de dominio y pruebas unitarias de handlers con mocks.
+- Se incluyen archivos `.http` para probar todos los endpoints definidos.
 
 ## Características principales
 
@@ -12,9 +18,8 @@ El proyecto concentra las reglas de negocio de ventas y no depende de infraestru
 - Estados de venta: `Abierta`, `Pagada` y `Cancelada`.
 - Conservación de nombre y precio históricos en cada detalle de venta.
 - Eventos de dominio al crear, pagar y cancelar una venta.
-- Resultados explícitos (`Resultado` y `Resultado<T>`) para reglas de negocio sin excepciones de flujo.
-- Validaciones defensivas para identificadores, argumentos nulos y métodos de pago inválidos.
-- Interfaces de repositorio asíncronas preparadas para una futura implementación con infraestructura.
+- Resultados explícitos (`Resultado`, `Resultado<T>`, `ResultadoAplicacion<T>`) para manejar reglas y validaciones.
+- Interfaces de repositorio asíncronas y unidad de trabajo para persistencia desacoplada.
 
 ## Reglas de negocio
 
@@ -27,30 +32,83 @@ El proyecto concentra las reglas de negocio de ventas y no depende de infraestru
 - El total se calcula a partir de los detalles y nunca se asigna manualmente.
 - El pago se realiza una única vez mediante efectivo, tarjeta o transferencia.
 
-La descripción completa del modelo está disponible en [docs/modelo-dominio.md](docs/modelo-dominio.md).
+La descripción completa del modelo de dominio está disponible en [docs/modelo-dominio.md](docs/modelo-dominio.md).
+
+## CQRS en Application
+
+### Commands implementados
+
+- `CrearProductoMenuComando`
+- `CrearVentaComando`
+- `AgregarProductoVentaComando`
+- `CambiarCantidadDetalleVentaComando`
+- `EliminarDetalleVentaComando`
+- `PagarVentaComando`
+- `CancelarVentaComando`
+
+### Queries implementadas
+
+- `ObtenerProductoMenuPorIdConsulta`
+- `ObtenerVentaPorIdConsulta`
+
+### Contratos de aplicación
+
+- Interfaces base CQRS: `IComando`, `IConsulta`, `IComandoHandler`, `IConsultaHandler`.
+- Orquestación transaccional: `IUnidadDeTrabajo`.
+- Dependencias temporales/identidad desacopladas: `IReloj`, `IGeneradorIdentidad`.
+- DTOs de salida y mapeadores manuales.
 
 ## Estructura
 
 ```text
 src/
-└── RestauranteVentas.Dominio/
-    ├── Abstracciones/   # Entidad, eventos, errores y resultados
-    ├── Compartido/      # Value Objects
-    ├── Productos/       # ProductoMenu y su repositorio
-    └── Ventas/          # Agregado Venta, detalles y eventos
+├── RestauranteVentas.Dominio/
+│   ├── Abstracciones/   # Entidad, eventos, errores y resultados
+│   ├── Compartido/      # Value Objects
+│   ├── Productos/       # ProductoMenu y su repositorio
+│   └── Ventas/          # Agregado Venta, detalles y eventos
+└── RestauranteVentas.Aplicacion/
+    ├── Abstracciones/   # Contratos CQRS, resultado de app y unidad de trabajo
+    ├── Dtos/            # Contratos de salida
+    ├── Mapeadores/      # Mapeo manual Dominio -> DTO
+    ├── Productos/       # Commands/Queries/Handlers de productos
+    └── Ventas/          # Commands/Queries/Handlers de ventas
 
 tests/
-└── RestauranteVentas.Dominio.Tests/
-    ├── Compartido/
+├── RestauranteVentas.Dominio.Tests/
+│   ├── Compartido/
+│   ├── Productos/
+│   └── Ventas/
+└── RestauranteVentas.Aplicacion.Tests/
+    ├── Helpers/
     ├── Productos/
     └── Ventas/
+
+docs/
+├── modelo-dominio.md
+└── http/
+    ├── productos.http
+    └── ventas.http
 ```
+
+## Endpoints documentados (.http)
+
+- `POST /api/productos`
+- `GET /api/productos/{productoId}`
+- `POST /api/ventas`
+- `GET /api/ventas/{ventaId}`
+- `POST /api/ventas/{ventaId}/detalles`
+- `PUT /api/ventas/{ventaId}/detalles/{detalleId}`
+- `DELETE /api/ventas/{ventaId}/detalles/{detalleId}`
+- `POST /api/ventas/{ventaId}/pagar`
+- `POST /api/ventas/{ventaId}/cancelar`
 
 ## Tecnologías
 
 - .NET 10
 - C#
 - xUnit
+- Moq
 
 ## Ejecutar las pruebas
 
@@ -60,8 +118,10 @@ Desde la raíz del repositorio:
 dotnet test RestauranteVentas.slnx
 ```
 
-Actualmente el proyecto cuenta con **35 pruebas unitarias** de dominio, sin mocks, bases de datos ni servicios externos.
+Estado actual: **53 pruebas unitarias** (dominio + aplicación), sin base de datos ni servicios externos.
 
-## Principios del dominio
+## Principios de arquitectura
 
-El proyecto `RestauranteVentas.Dominio` es una biblioteca independiente y pura. Las capas futuras —Application, Infrastructure y API— deben depender del dominio, nunca al contrario.
+- `RestauranteVentas.Dominio` se mantiene puro y sin dependencias externas.
+- `RestauranteVentas.Aplicacion` depende del dominio para ejecutar casos de uso.
+- Las capas futuras de Infrastructure y API deben depender de Application/Dominio, nunca al revés.
