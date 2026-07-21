@@ -1,7 +1,11 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
-var postgres = builder.AddPostgres("postgres")
-    .WithDataVolume("restauranteventas-postgres-data");
+var postgres = builder.AddPostgres("postgres");
+
+if (!string.Equals(builder.Configuration["UseVolumes"], "false", StringComparison.OrdinalIgnoreCase))
+{
+    postgres.WithDataVolume("restauranteventas-postgres-data");
+}
 
 var baseDatos = postgres.AddDatabase("restauranteventas");
 
