@@ -2,7 +2,7 @@ namespace RestauranteVentas.Dominio.Ventas;
 
 public interface IRepositorioVenta
 {
-    Venta? ObtenerPorId(Guid id);
+    Task<Venta?> ObtenerPorIdAsync(Guid id, CancellationToken cancellationToken = default);
 
-    void Agregar(Venta venta);
+    Task AgregarAsync(Venta venta, CancellationToken cancellationToken = default);
 }

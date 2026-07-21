@@ -38,6 +38,15 @@ public class VentaTests
     }
 
     [Fact]
+    public void Crear_rechaza_identificador_vacio()
+    {
+        var resultado = Venta.Crear(Guid.Empty, null, null, FechaCreacion);
+
+        Assert.False(resultado.EsExito);
+        Assert.Equal(ErroresVenta.IdInvalido.Codigo, resultado.Error!.Codigo);
+    }
+
+    [Fact]
     public void Agregar_producto_crea_detalle_con_nombre_y_precio_historico()
     {
         var venta = CrearVentaAbierta();
@@ -101,6 +110,21 @@ public class VentaTests
     }
 
     [Fact]
+    public void Agregar_producto_rechaza_argumentos_nulos()
+    {
+        var venta = CrearVentaAbierta();
+        var cantidad = Cantidad.Crear(1).Valor!;
+
+        var productoNulo = venta.AgregarProducto(null, cantidad);
+        var cantidadNula = venta.AgregarProducto(CrearProducto("Plato", 12m), null);
+
+        Assert.False(productoNulo.EsExito);
+        Assert.Equal(ErroresVenta.ProductoInvalido.Codigo, productoNulo.Error!.Codigo);
+        Assert.False(cantidadNula.EsExito);
+        Assert.Equal(ErroresVenta.CantidadInvalida.Codigo, cantidadNula.Error!.Codigo);
+    }
+
+    [Fact]
     public void Pagar_cambia_estado_registra_fecha_metodo_y_evento()
     {
         var venta = CrearVentaConProducto();
@@ -112,6 +136,17 @@ public class VentaTests
         Assert.Equal(MetodoPago.Tarjeta, venta.MetodoPago);
         Assert.Equal(FechaPago, venta.FechaPagoUtc);
         Assert.Contains(venta.Eventos, e => e is VentaPagadaEventoDominio);
+    }
+
+    [Fact]
+    public void Pagar_rechaza_metodo_de_pago_no_definido()
+    {
+        var venta = CrearVentaConProducto();
+
+        var resultado = venta.Pagar((MetodoPago)99, FechaPago);
+
+        Assert.False(resultado.EsExito);
+        Assert.Equal(ErroresVenta.MetodoPagoInvalido.Codigo, resultado.Error!.Codigo);
     }
 
     [Fact]

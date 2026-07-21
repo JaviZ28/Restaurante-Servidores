@@ -39,17 +39,32 @@ public sealed class Venta : Entidad
         NumeroMesa? mesa,
         DateTime fechaCreacionUtc)
     {
+        if (id == Guid.Empty)
+        {
+            return Resultado<Venta>.Fallo(ErroresVenta.IdInvalido);
+        }
+
         var venta = new Venta(id, clienteId, mesa, fechaCreacionUtc);
         venta.RegistrarEvento(new VentaCreadaEventoDominio(id, fechaCreacionUtc));
         return Resultado<Venta>.Exito(venta);
     }
 
-    public Resultado AgregarProducto(ProductoMenu producto, Cantidad cantidad)
+    public Resultado AgregarProducto(ProductoMenu? producto, Cantidad? cantidad)
     {
         var errorEstado = ValidarVentaAbierta();
         if (errorEstado is not null)
         {
             return Resultado.Fallo(errorEstado);
+        }
+
+        if (producto is null)
+        {
+            return Resultado.Fallo(ErroresVenta.ProductoInvalido);
+        }
+
+        if (cantidad is null)
+        {
+            return Resultado.Fallo(ErroresVenta.CantidadInvalida);
         }
 
         if (!producto.EstaActivo)
@@ -68,12 +83,17 @@ public sealed class Venta : Entidad
         return Resultado.Exito();
     }
 
-    public Resultado CambiarCantidad(Guid detalleId, Cantidad nuevaCantidad)
+    public Resultado CambiarCantidad(Guid detalleId, Cantidad? nuevaCantidad)
     {
         var errorEstado = ValidarVentaAbierta();
         if (errorEstado is not null)
         {
             return Resultado.Fallo(errorEstado);
+        }
+
+        if (nuevaCantidad is null)
+        {
+            return Resultado.Fallo(ErroresVenta.CantidadInvalida);
         }
 
         var detalle = BuscarDetalle(detalleId);
@@ -105,6 +125,11 @@ public sealed class Venta : Entidad
 
     public Resultado Pagar(MetodoPago metodoPago, DateTime fechaPagoUtc)
     {
+        if (!Enum.IsDefined(metodoPago))
+        {
+            return Resultado.Fallo(ErroresVenta.MetodoPagoInvalido);
+        }
+
         if (Estado == EstadoVenta.Pagada)
         {
             return Resultado.Fallo(ErroresVenta.YaPagada);

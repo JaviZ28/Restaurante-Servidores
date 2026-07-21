@@ -26,6 +26,18 @@ public class ProductoMenuTests
     }
 
     [Fact]
+    public void Crear_rechaza_identificador_vacio()
+    {
+        var resultado = ProductoMenu.Crear(
+            Guid.Empty,
+            NombreProducto.Crear("Hamburguesa").Valor!,
+            Dinero.Crear(15m).Valor!);
+
+        Assert.False(resultado.EsExito);
+        Assert.Equal(ErroresProductoMenu.IdInvalido.Codigo, resultado.Error!.Codigo);
+    }
+
+    [Fact]
     public void No_permite_precio_invalido()
     {
         var producto = CrearProductoActivo();

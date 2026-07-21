@@ -19,6 +19,11 @@ public sealed class ProductoMenu : Entidad
 
     public static Resultado<ProductoMenu> Crear(Guid id, NombreProducto? nombre, Dinero? precio)
     {
+        if (id == Guid.Empty)
+        {
+            return Resultado<ProductoMenu>.Fallo(ErroresProductoMenu.IdInvalido);
+        }
+
         if (nombre is null)
         {
             return Resultado<ProductoMenu>.Fallo(ErroresProductoMenu.NombreInvalido);

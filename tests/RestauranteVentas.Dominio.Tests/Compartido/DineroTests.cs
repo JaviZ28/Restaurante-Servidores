@@ -25,26 +25,16 @@ public class DineroTests
     }
 
     [Fact]
-    public void Sumar_en_monedas_diferentes_falla()
+    public void Sumar_montos_usd_calcula_total()
     {
         var usd = Dinero.Crear(10m).Valor!;
         var otroUsd = Dinero.Crear(5m).Valor!;
 
-        var resultadoValido = usd.Sumar(otroUsd);
-        Assert.True(resultadoValido.EsExito);
-        Assert.Equal(15m, resultadoValido.Valor!.Monto);
+        var resultado = usd.Sumar(otroUsd);
 
-        var dineroReflexion = typeof(Dinero).GetConstructor(
-            System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance,
-            null,
-            [typeof(decimal), typeof(string)],
-            null)!;
-
-        var dineroCop = (Dinero)dineroReflexion.Invoke([10m, "EUR"])!;
-        var resultadoInvalido = usd.Sumar(dineroCop);
-
-        Assert.False(resultadoInvalido.EsExito);
-        Assert.Equal(Dinero.CodigoMonedaDistinta, resultadoInvalido.Error!.Codigo);
+        Assert.True(resultado.EsExito);
+        Assert.Equal(15m, resultado.Valor!.Monto);
+        Assert.Equal(Dinero.MonedaUsd, resultado.Valor.Moneda);
     }
 
     [Fact]

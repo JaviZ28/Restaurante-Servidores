@@ -2,6 +2,18 @@ namespace RestauranteVentas.Dominio.Ventas;
 
 public static class ErroresVenta
 {
+    public static readonly Abstracciones.Error IdInvalido =
+        new("Venta.IdInvalido", "El identificador de la venta es obligatorio.");
+
+    public static readonly Abstracciones.Error ProductoInvalido =
+        new("Venta.ProductoInvalido", "El producto es obligatorio.");
+
+    public static readonly Abstracciones.Error CantidadInvalida =
+        new("Venta.CantidadInvalida", "La cantidad es obligatoria.");
+
+    public static readonly Abstracciones.Error MetodoPagoInvalido =
+        new("Venta.MetodoPagoInvalido", "El método de pago indicado no es válido.");
+
     public static readonly Abstracciones.Error VentaNoAbierta =
         new("Venta.NoAbierta", "La venta no está abierta.");
 

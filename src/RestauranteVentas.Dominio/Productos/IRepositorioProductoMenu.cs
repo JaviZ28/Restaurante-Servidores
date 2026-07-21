@@ -2,7 +2,7 @@ namespace RestauranteVentas.Dominio.Productos;
 
 public interface IRepositorioProductoMenu
 {
-    ProductoMenu? ObtenerPorId(Guid id);
+    Task<ProductoMenu?> ObtenerPorIdAsync(Guid id, CancellationToken cancellationToken = default);
 
-    void Agregar(ProductoMenu producto);
+    Task AgregarAsync(ProductoMenu producto, CancellationToken cancellationToken = default);
 }
