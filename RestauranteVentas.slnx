@@ -2,6 +2,7 @@
   <Folder Name="/src/">
     <Project Path="src/RestauranteVentas.Aplicacion/RestauranteVentas.Aplicacion.csproj" />
     <Project Path="src/RestauranteVentas.Dominio/RestauranteVentas.Dominio.csproj" />
+    <Project Path="src/RestauranteVentas.Infrastructure/RestauranteVentas.Infrastructure.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/RestauranteVentas.Aplicacion.Tests/RestauranteVentas.Aplicacion.Tests.csproj" />
