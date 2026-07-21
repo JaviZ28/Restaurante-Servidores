@@ -6,8 +6,11 @@ Implementación del núcleo de negocio y de la capa de aplicación para la gesti
 
 - `RestauranteVentas.Dominio` concentra reglas de negocio puras (sin infraestructura).
 - `RestauranteVentas.Aplicacion` orquesta casos de uso con Commands, Queries y Handlers.
+- `RestauranteVentas.Infrastructure` implementa EF Core, PostgreSQL, repositorios y unidad de trabajo.
+- `RestauranteVentas.Api` expone los casos de uso mediante Minimal APIs y aplica las migraciones al iniciar.
+- `RestauranteVentas.AppHost` orquesta la API y PostgreSQL con .NET Aspire.
 - El mapeo de entidades a DTOs se realiza de forma manual.
-- Se incluyen pruebas unitarias de dominio y pruebas unitarias de handlers con mocks.
+- Se incluyen pruebas unitarias y pruebas de integración con `Aspire.Hosting.Testing`.
 - Se incluyen archivos `.http` para probar todos los endpoints definidos.
 
 ## Características principales
@@ -109,6 +112,9 @@ docs/
 - C#
 - xUnit
 - Moq
+- Entity Framework Core 10
+- PostgreSQL
+- .NET Aspire
 
 ## Ejecutar las pruebas
 
@@ -118,10 +124,35 @@ Desde la raíz del repositorio:
 dotnet test RestauranteVentas.slnx
 ```
 
-Estado actual: **53 pruebas unitarias** (dominio + aplicación), sin base de datos ni servicios externos.
+Estado actual: **55 pruebas** (53 unitarias y 2 de integración).
+
+## Ejecutar con Aspire
+
+Se requiere Docker en ejecución. Desde la raíz del repositorio:
+
+```bash
+aspire start --apphost RestauranteVentas.AppHost/RestauranteVentas.AppHost.csproj --non-interactive
+aspire wait api --non-interactive
+```
+
+Aspire crea PostgreSQL y la API aplica la migración inicial al iniciar. Para detener el entorno:
+
+```bash
+aspire stop --non-interactive
+```
+
+## Migraciones
+
+La herramienta `dotnet-ef` está declarada en `dotnet-tools.json`. Antes de crear o verificar migraciones, configure una cadena de conexión local en `RESTAURANTEVENTAS_CONNECTION_STRING`:
+
+```powershell
+dotnet tool restore
+$env:RESTAURANTEVENTAS_CONNECTION_STRING = "Host=localhost;Port=5432;Database=restauranteventas;Username=postgres;Password=<password>"
+dotnet tool run dotnet-ef migrations has-pending-model-changes --project src/RestauranteVentas.Infrastructure --context RestauranteVentasDbContext
+```
 
 ## Principios de arquitectura
 
 - `RestauranteVentas.Dominio` se mantiene puro y sin dependencias externas.
 - `RestauranteVentas.Aplicacion` depende del dominio para ejecutar casos de uso.
-- Las capas futuras de Infrastructure y API deben depender de Application/Dominio, nunca al revés.
+- Infrastructure y API dependen de Application/Dominio, nunca al revés.
