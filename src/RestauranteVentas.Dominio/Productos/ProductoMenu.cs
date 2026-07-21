@@ -9,11 +9,11 @@ public sealed class ProductoMenu : Entidad
     public Dinero PrecioActual { get; private set; }
     public bool EstaActivo { get; private set; }
 
-    private ProductoMenu(Guid id, NombreProducto nombre, Dinero precio)
+    private ProductoMenu(Guid id, NombreProducto nombre, Dinero precioActual)
         : base(id)
     {
         Nombre = nombre;
-        PrecioActual = precio;
+        PrecioActual = precioActual;
         EstaActivo = true;
     }
 

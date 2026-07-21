@@ -30,18 +30,13 @@ public sealed class DetalleVentaConfiguracion : IEntityTypeConfiguration<Detalle
                 nombre => nombre.Valor,
                 valor => NombreProducto.Crear(valor).Valor!);
 
-        constructor.OwnsOne(detalle => detalle.PrecioUnitarioHistorico, precio =>
-        {
-            precio.Property(dinero => dinero.Monto)
-                .HasColumnName("precio_unitario_monto")
-                .HasPrecision(18, 2)
-                .IsRequired();
-
-            precio.Property(dinero => dinero.Moneda)
-                .HasColumnName("precio_unitario_moneda")
-                .HasMaxLength(3)
-                .IsRequired();
-        });
+        constructor.Property(detalle => detalle.PrecioUnitarioHistorico)
+            .HasColumnName("precio_unitario_monto")
+            .HasConversion(
+                dinero => dinero.Monto,
+                monto => Dinero.Crear(monto).Valor!)
+            .HasPrecision(18, 2)
+            .IsRequired();
 
         constructor.Property(detalle => detalle.Cantidad)
             .HasColumnName("cantidad")
