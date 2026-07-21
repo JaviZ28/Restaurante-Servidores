@@ -1,0 +1,54 @@
+@baseUrl = http://localhost:5000
+@ventaId = 00000000-0000-0000-0000-000000000010
+@productoId = 00000000-0000-0000-0000-000000000001
+@detalleId = 00000000-0000-0000-0000-000000000020
+
+### Crear venta
+POST {{baseUrl}}/api/ventas
+Content-Type: application/json
+Accept: application/json
+
+{
+  "clienteId": null,
+  "numeroMesa": 7
+}
+
+### Obtener venta por id
+GET {{baseUrl}}/api/ventas/{{ventaId}}
+Accept: application/json
+
+### Agregar producto a venta
+POST {{baseUrl}}/api/ventas/{{ventaId}}/detalles
+Content-Type: application/json
+Accept: application/json
+
+{
+  "productoMenuId": "{{productoId}}",
+  "cantidad": 2
+}
+
+### Cambiar cantidad de detalle
+PUT {{baseUrl}}/api/ventas/{{ventaId}}/detalles/{{detalleId}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "nuevaCantidad": 3
+}
+
+### Eliminar detalle de venta
+DELETE {{baseUrl}}/api/ventas/{{ventaId}}/detalles/{{detalleId}}
+Accept: application/json
+
+### Pagar venta
+POST {{baseUrl}}/api/ventas/{{ventaId}}/pagar
+Content-Type: application/json
+Accept: application/json
+
+{
+  "metodoPago": "Tarjeta"
+}
+
+### Cancelar venta
+POST {{baseUrl}}/api/ventas/{{ventaId}}/cancelar
+Accept: application/json
