@@ -28,9 +28,12 @@ public class ProductoMenuTests
     [Fact]
     public void No_permite_precio_invalido()
     {
-        var precioInvalido = Dinero.Crear(0m);
-        Assert.False(precioInvalido.EsExito);
-        Assert.Equal(Dinero.CodigoMontoInvalido, precioInvalido.Error!.Codigo);
+        var producto = CrearProductoActivo();
+
+        var resultado = producto.ActualizarPrecio(null);
+
+        Assert.False(resultado.EsExito);
+        Assert.Equal(ErroresProductoMenu.PrecioInvalido.Codigo, resultado.Error!.Codigo);
     }
 
     [Fact]

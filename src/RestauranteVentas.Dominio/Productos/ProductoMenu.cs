@@ -17,17 +17,39 @@ public sealed class ProductoMenu : Entidad
         EstaActivo = true;
     }
 
-    public static Resultado<ProductoMenu> Crear(Guid id, NombreProducto nombre, Dinero precio) =>
-        Resultado<ProductoMenu>.Exito(new ProductoMenu(id, nombre, precio));
-
-    public Resultado ActualizarPrecio(Dinero nuevoPrecio)
+    public static Resultado<ProductoMenu> Crear(Guid id, NombreProducto? nombre, Dinero? precio)
     {
+        if (nombre is null)
+        {
+            return Resultado<ProductoMenu>.Fallo(ErroresProductoMenu.NombreInvalido);
+        }
+
+        if (precio is null)
+        {
+            return Resultado<ProductoMenu>.Fallo(ErroresProductoMenu.PrecioInvalido);
+        }
+
+        return Resultado<ProductoMenu>.Exito(new ProductoMenu(id, nombre, precio));
+    }
+
+    public Resultado ActualizarPrecio(Dinero? nuevoPrecio)
+    {
+        if (nuevoPrecio is null)
+        {
+            return Resultado.Fallo(ErroresProductoMenu.PrecioInvalido);
+        }
+
         PrecioActual = nuevoPrecio;
         return Resultado.Exito();
     }
 
-    public Resultado CambiarNombre(NombreProducto nuevoNombre)
+    public Resultado CambiarNombre(NombreProducto? nuevoNombre)
     {
+        if (nuevoNombre is null)
+        {
+            return Resultado.Fallo(ErroresProductoMenu.NombreInvalido);
+        }
+
         Nombre = nuevoNombre;
         return Resultado.Exito();
     }
