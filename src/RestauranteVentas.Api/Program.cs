@@ -38,7 +38,18 @@ constructor.Services.AddScoped<IComandoHandler<EliminarDetalleVentaComando, Resu
 constructor.Services.AddScoped<IComandoHandler<PagarVentaComando, ResultadoAplicacion<VentaDto>>, PagarVentaHandler>();
 constructor.Services.AddScoped<IComandoHandler<CancelarVentaComando, ResultadoAplicacion<VentaDto>>, CancelarVentaHandler>();
 
+constructor.Services.AddEndpointsApiExplorer();
+constructor.Services.AddSwaggerGen();
 var aplicacion = constructor.Build();
+
+if (aplicacion.Environment.IsDevelopment())
+{
+    aplicacion.UseSwagger();
+    aplicacion.UseSwaggerUI(options =>
+    {
+        options.SwaggerEndpoint("/swagger/v1/swagger.json", "Restaurante Ventas API v1");
+    });
+}
 
 await using (var alcance = aplicacion.Services.CreateAsyncScope())
 {

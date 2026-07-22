@@ -55,6 +55,31 @@ public sealed class FlujoVentaIntegrationTests
         Assert.Equal(25.00m, ventaPagada.Total);
     }
 
+    [Fact]
+    public async Task Crear_venta_y_cancelarla_persiste_el_estado_final()
+    {
+        await using var aplicacion = await CrearAplicacionAsync();
+        using var cliente = aplicacion.CreateHttpClient("api");
+
+        var venta = await CrearAsync(
+            cliente,
+            "/api/ventas",
+            new { clienteId = (Guid?)null, numeroMesa = 10 });
+
+        using var respuestaCancelar = await cliente.PostAsync(
+            $"/api/ventas/{venta.Id}/cancelar",
+            null);
+
+        Assert.Equal(HttpStatusCode.OK, respuestaCancelar.StatusCode);
+
+        using var respuestaConsulta = await cliente.GetAsync($"/api/ventas/{venta.Id}");
+        var ventaCancelada = await respuestaConsulta.Content.ReadFromJsonAsync<VentaRespuesta>();
+
+        Assert.Equal(HttpStatusCode.OK, respuestaConsulta.StatusCode);
+        Assert.NotNull(ventaCancelada);
+        Assert.Equal("Cancelada", ventaCancelada.Estado);
+    }
+
     private static async Task<AplicacionIniciada> CrearAplicacionAsync()
     {
         using var cancelacion = new CancellationTokenSource(TiempoEspera);
