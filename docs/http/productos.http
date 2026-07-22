@@ -1,5 +1,5 @@
 @baseUrl = http://localhost:5000
-@productoId = 00000000-0000-0000-0000-000000000001
+@productoId = d69c784f-423b-499e-9c71-de0f623cca8d
 
 ### Crear producto de menu
 POST {{baseUrl}}/api/productos

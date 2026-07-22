@@ -1,7 +1,7 @@
 @baseUrl = http://localhost:5000
-@ventaId = 00000000-0000-0000-0000-000000000010
-@productoId = 00000000-0000-0000-0000-000000000001
-@detalleId = 00000000-0000-0000-0000-000000000020
+@ventaId = 53352250-2322-4901-b463-228e30ea24ce
+@productoId = d69c784f-423b-499e-9c71-de0f623cca8d
+@detalleId = abcf6a03-3665-4330-9218-e670a0eaa6f2
 
 ### Crear venta
 POST {{baseUrl}}/api/ventas
@@ -9,7 +9,7 @@ Content-Type: application/json
 Accept: application/json
 
 {
-  "clienteId": null,
+  "clienteId": "00000000-0000-0000-0000-000000000099",
   "numeroMesa": 7
 }
 
