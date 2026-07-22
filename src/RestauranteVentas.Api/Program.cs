@@ -58,7 +58,6 @@ await using (var alcance = aplicacion.Services.CreateAsyncScope())
 }
 
 aplicacion.MapDefaultEndpoints();
-aplicacion.MapHealthChecks("/health");
 
 aplicacion.MapPost("/api/productos", async (
     CrearProductoSolicitud solicitud,

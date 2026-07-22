@@ -1,9 +1,18 @@
 @baseUrl = http://localhost:5000
-@ventaId = 53352250-2322-4901-b463-228e30ea24ce
-@productoId = d69c784f-423b-499e-9c71-de0f623cca8d
-@detalleId = abcf6a03-3665-4330-9218-e670a0eaa6f2
 
-### Crear venta
+### 1. Crear producto de menu (Se guarda su ID en la memoria)
+# @name crearProducto
+POST {{baseUrl}}/api/productos
+Content-Type: application/json
+Accept: application/json
+
+{
+  "nombre": "Milanesa napolitana",
+  "precio": 25.50
+}
+
+### 2. Crear venta (Se guarda su ID en la memoria)
+# @name crearVenta
 POST {{baseUrl}}/api/ventas
 Content-Type: application/json
 Accept: application/json
@@ -13,22 +22,19 @@ Accept: application/json
   "numeroMesa": 7
 }
 
-### Obtener venta por id
-GET {{baseUrl}}/api/ventas/{{ventaId}}
-Accept: application/json
-
-### Agregar producto a venta
-POST {{baseUrl}}/api/ventas/{{ventaId}}/detalles
+### 3. Agregar producto a venta usando los IDs automáticos
+# @name agregarDetalle
+POST {{baseUrl}}/api/ventas/{{crearVenta.response.body.$.id}}/detalles
 Content-Type: application/json
 Accept: application/json
 
 {
-  "productoMenuId": "{{productoId}}",
+  "productoMenuId": "{{crearProducto.response.body.$.id}}",
   "cantidad": 2
 }
 
-### Cambiar cantidad de detalle
-PUT {{baseUrl}}/api/ventas/{{ventaId}}/detalles/{{detalleId}}
+### 4. Cambiar cantidad de detalle (Accediendo al ID del detalle generado en el paso 3)
+PUT {{baseUrl}}/api/ventas/{{crearVenta.response.body.$.id}}/detalles/{{agregarDetalle.response.body.$.detalles[0].id}}
 Content-Type: application/json
 Accept: application/json
 
@@ -36,12 +42,8 @@ Accept: application/json
   "nuevaCantidad": 3
 }
 
-### Eliminar detalle de venta
-DELETE {{baseUrl}}/api/ventas/{{ventaId}}/detalles/{{detalleId}}
-Accept: application/json
-
-### Pagar venta
-POST {{baseUrl}}/api/ventas/{{ventaId}}/pagar
+### 5. Pagar venta
+POST {{baseUrl}}/api/ventas/{{crearVenta.response.body.$.id}}/pagar
 Content-Type: application/json
 Accept: application/json
 
@@ -49,6 +51,28 @@ Accept: application/json
   "metodoPago": "Tarjeta"
 }
 
-### Cancelar venta
-POST {{baseUrl}}/api/ventas/{{ventaId}}/cancelar
+### 6. Ver estado final de la venta (Debería estar Pagada y con Total)
+GET {{baseUrl}}/api/ventas/{{crearVenta.response.body.$.id}}
+Accept: application/json
+
+#FLUJO ALTERNATIVO: CANCELAR VENTA
+
+
+### 7. Crear otra venta exclusivamente para cancelarla
+# @name crearVentaParaCancelar
+POST {{baseUrl}}/api/ventas
+Content-Type: application/json
+Accept: application/json
+
+{
+  "clienteId": "00000000-0000-0000-0000-000000000099",
+  "numeroMesa": 2
+}
+
+### 8. Cancelar la venta
+POST {{baseUrl}}/api/ventas/{{crearVentaParaCancelar.response.body.$.id}}/cancelar
+Accept: application/json
+
+### 9. Ver estado final de la venta cancelada
+GET {{baseUrl}}/api/ventas/{{crearVentaParaCancelar.response.body.$.id}}
 Accept: application/json

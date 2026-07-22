@@ -1,5 +1,5 @@
 @baseUrl = http://localhost:5000
-@productoId = d69c784f-423b-499e-9c71-de0f623cca8d
+@productoId = 36dacdba-4416-4046-b373-6adce71478b9
 
 ### Crear producto de menu
 POST {{baseUrl}}/api/productos
@@ -7,7 +7,7 @@ Content-Type: application/json
 Accept: application/json
 
 {
-  "nombre": "Milanesa napolitana",
+  "nombre": "Milanesa napolitanass",
   "precio": 25.50
 }
 
