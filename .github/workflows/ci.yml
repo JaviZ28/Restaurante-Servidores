@@ -36,8 +36,17 @@ jobs:
       - name: Compilar en Release
         run: dotnet build RestauranteVentas.slnx --configuration Release --no-restore
 
-      - name: Ejecutar pruebas unitarias e integración con cobertura
-        run: dotnet test RestauranteVentas.slnx --configuration Release --no-build --logger "console;verbosity=normal" --collect:"XPlat Code Coverage" --results-directory TestResults
+      - name: Ejecutar pruebas de dominio con cobertura
+        run: dotnet test tests/RestauranteVentas.Dominio.Tests/RestauranteVentas.Dominio.Tests.csproj --configuration Release --no-build --logger "console;verbosity=normal" --collect:"XPlat Code Coverage" --results-directory TestResults
+
+      - name: Ejecutar pruebas de aplicación con cobertura
+        run: dotnet test tests/RestauranteVentas.Aplicacion.Tests/RestauranteVentas.Aplicacion.Tests.csproj --configuration Release --no-build --logger "console;verbosity=normal" --collect:"XPlat Code Coverage" --results-directory TestResults
+
+      - name: Ejecutar pruebas de arquitectura
+        run: dotnet test tests/RestauranteVentas.Arquitectura.Tests/RestauranteVentas.Arquitectura.Tests.csproj --configuration Release --no-build --logger "console;verbosity=normal"
+
+      - name: Ejecutar pruebas de integración
+        run: dotnet test tests/RestauranteVentas.IntegrationTests/RestauranteVentas.IntegrationTests.csproj --configuration Release --no-build --logger "console;verbosity=normal"
 
       - name: Publicar cobertura
         if: always()
