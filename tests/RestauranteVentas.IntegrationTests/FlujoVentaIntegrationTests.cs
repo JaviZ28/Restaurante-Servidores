@@ -226,7 +226,7 @@ public sealed class FlujoVentaIntegrationTests
             new { nombre = "Producto actualizado", precio = 7.25m });
         var productoActualizado = await respuestaActualizar.Content.ReadFromJsonAsync<ProductoRespuesta>();
 
-        Assert.Equal(HttpStatusCode.OK, respuestaActualizar.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, respuestaActualizar.StatusCode); 
         Assert.NotNull(productoActualizado);
         Assert.Equal("Producto actualizado", productoActualizado.Nombre);
         Assert.Equal(7.25m, productoActualizado.PrecioActual);
