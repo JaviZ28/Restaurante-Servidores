@@ -14,11 +14,7 @@ public sealed class DetalleVenta
 
     public Dinero Subtotal
     {
-        get
-        {
-            var resultado = PrecioUnitarioHistorico.Multiplicar(Cantidad);
-            return resultado.Valor!;
-        }
+        get => CalcularSubtotal(Cantidad).Valor!;
     }
 
     private DetalleVenta(
@@ -40,6 +36,12 @@ public sealed class DetalleVenta
         ProductoMenu producto,
         Cantidad cantidad)
     {
+        var resultadoSubtotal = producto.PrecioActual.Multiplicar(cantidad);
+        if (!resultadoSubtotal.EsExito)
+        {
+            return Resultado<DetalleVenta>.Fallo(resultadoSubtotal.Error!);
+        }
+
         var detalle = new DetalleVenta(
             id,
             producto.Id,
@@ -52,7 +54,16 @@ public sealed class DetalleVenta
 
     internal Resultado CambiarCantidad(Cantidad nuevaCantidad)
     {
+        var resultadoSubtotal = CalcularSubtotal(nuevaCantidad);
+        if (!resultadoSubtotal.EsExito)
+        {
+            return Resultado.Fallo(resultadoSubtotal.Error!);
+        }
+
         Cantidad = nuevaCantidad;
         return Resultado.Exito();
     }
+
+    internal Resultado<Dinero> CalcularSubtotal(Cantidad cantidad) =>
+        PrecioUnitarioHistorico.Multiplicar(cantidad);
 }

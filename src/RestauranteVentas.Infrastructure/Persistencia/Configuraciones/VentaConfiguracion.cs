@@ -16,7 +16,35 @@ public sealed class VentaConfiguracion : IEntityTypeConfiguration<Venta>
 
     public void Configure(EntityTypeBuilder<Venta> constructor)
     {
-        constructor.ToTable("ventas");
+        constructor.ToTable("ventas", tabla =>
+        {
+            tabla.HasCheckConstraint(
+                "CK_ventas_cliente_id_no_vacio",
+                "\"cliente_id\" IS NULL OR \"cliente_id\" <> '00000000-0000-0000-0000-000000000000'::uuid");
+            tabla.HasCheckConstraint(
+                "CK_ventas_numero_mesa_positivo",
+                "\"numero_mesa\" IS NULL OR \"numero_mesa\" > 0");
+            tabla.HasCheckConstraint(
+                "CK_ventas_estado_valido",
+                "\"estado\" IN ('Abierta', 'Pagada', 'Cancelada')");
+            tabla.HasCheckConstraint(
+                "CK_ventas_fecha_creacion_valida",
+                "\"fecha_creacion_utc\" > TIMESTAMPTZ '0001-01-01 00:00:00+00'");
+            tabla.HasCheckConstraint(
+                "CK_ventas_fecha_pago_posterior",
+                "\"fecha_pago_utc\" IS NULL OR \"fecha_pago_utc\" > \"fecha_creacion_utc\"");
+            tabla.HasCheckConstraint(
+                "CK_ventas_fecha_cancelacion_posterior",
+                "\"fecha_cancelacion_utc\" IS NULL OR \"fecha_cancelacion_utc\" > \"fecha_creacion_utc\"");
+            tabla.HasCheckConstraint(
+                "CK_ventas_transicion_estado_coherente",
+                "(\"estado\" = 'Abierta' AND \"fecha_pago_utc\" IS NULL AND \"metodo_pago\" IS NULL AND \"fecha_cancelacion_utc\" IS NULL AND \"motivo_cancelacion\" IS NULL) OR " +
+                "(\"estado\" = 'Pagada' AND \"fecha_pago_utc\" IS NOT NULL AND \"metodo_pago\" IS NOT NULL AND \"fecha_cancelacion_utc\" IS NULL AND \"motivo_cancelacion\" IS NULL) OR " +
+                "(\"estado\" = 'Cancelada' AND \"fecha_pago_utc\" IS NULL AND \"metodo_pago\" IS NULL AND \"fecha_cancelacion_utc\" IS NOT NULL AND length(btrim(coalesce(\"motivo_cancelacion\", ''))) > 0)");
+            tabla.HasCheckConstraint(
+                "CK_ventas_metodo_pago_valido",
+                "\"metodo_pago\" IS NULL OR \"metodo_pago\" IN ('Efectivo', 'Tarjeta', 'Transferencia')");
+        });
 
         constructor.HasKey(venta => venta.Id);
 
@@ -50,6 +78,31 @@ public sealed class VentaConfiguracion : IEntityTypeConfiguration<Venta>
             .HasColumnName("metodo_pago")
             .HasConversion<string>()
             .HasMaxLength(20);
+
+        constructor.Property(venta => venta.FechaCancelacionUtc)
+            .HasColumnName("fecha_cancelacion_utc")
+            .HasColumnType("timestamp with time zone");
+
+        constructor.Property(venta => venta.MotivoCancelacion)
+            .HasColumnName("motivo_cancelacion")
+            .HasMaxLength(Venta.LongitudMaximaMotivoCancelacion);
+
+        constructor.Property(venta => venta.Revision)
+            .HasColumnName("revision")
+            .IsConcurrencyToken()
+            .ValueGeneratedNever()
+            .IsRequired();
+
+        // PostgreSQL incrementa la columna de sistema xmin con cada UPDATE.
+        // EF la incluye en el WHERE de UPDATE/DELETE para detectar escrituras
+        // concurrentes. Revision hace que también las mutaciones de detalles
+        // emitan un UPDATE sobre la raíz del agregado.
+        constructor.Property<uint>("xmin")
+            .HasColumnName("xmin")
+            .IsRowVersion();
+
+        constructor.HasIndex(venta => new { venta.Estado, venta.FechaCreacionUtc })
+            .HasDatabaseName("IX_ventas_estado_fecha_creacion_utc");
 
         constructor.HasMany(venta => venta.Detalles)
             .WithOne()

@@ -24,7 +24,7 @@ public class CancelarVentaHandlerTests
             unidadDeTrabajo.Object,
             reloj.Object);
 
-        var resultado = await handler.ManejarAsync(new CancelarVentaComando(Guid.NewGuid()));
+        var resultado = await handler.ManejarAsync(new CancelarVentaComando(Guid.NewGuid(), "Error de captura"));
 
         Assert.False(resultado.EsExito);
         Assert.Equal("Venta.NoEncontrada", resultado.Error!.Codigo);
@@ -50,10 +50,12 @@ public class CancelarVentaHandlerTests
             unidadDeTrabajo.Object,
             reloj.Object);
 
-        var resultado = await handler.ManejarAsync(new CancelarVentaComando(venta.Id));
+        var resultado = await handler.ManejarAsync(new CancelarVentaComando(venta.Id, "Cliente desistió de la compra"));
 
         Assert.True(resultado.EsExito);
         Assert.Equal("Cancelada", resultado.Valor!.Estado);
+        Assert.Equal(fechaCancelacion, resultado.Valor.FechaCancelacionUtc);
+        Assert.Equal("Cliente desistió de la compra", resultado.Valor.MotivoCancelacion);
         unidadDeTrabajo.Verify(x => x.GuardarCambiosAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 }

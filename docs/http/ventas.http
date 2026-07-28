@@ -1,6 +1,8 @@
+# Ejecute las solicitudes en orden. Ajuste @baseUrl a la URL publicada por Aspire.
 @baseUrl = http://localhost:5000
+@clienteId = 00000000-0000-0000-0000-000000000099
 
-### 1. Crear producto de menu (Se guarda su ID en la memoria)
+### Crear producto activo para el flujo de cobro
 # @name crearProducto
 POST {{baseUrl}}/api/productos
 Content-Type: application/json
@@ -11,18 +13,18 @@ Accept: application/json
   "precio": 25.50
 }
 
-### 2. Crear venta (Se guarda su ID en la memoria)
+### Abrir venta (semánticamente, una comanda abierta)
 # @name crearVenta
 POST {{baseUrl}}/api/ventas
 Content-Type: application/json
 Accept: application/json
 
 {
-  "clienteId": "00000000-0000-0000-0000-000000000099",
+  "clienteId": "{{clienteId}}",
   "numeroMesa": 7
 }
 
-### 3. Agregar producto a venta usando los IDs automáticos
+### Agregar un detalle con snapshot histórico de nombre y precio
 # @name agregarDetalle
 POST {{baseUrl}}/api/ventas/{{crearVenta.response.body.$.id}}/detalles
 Content-Type: application/json
@@ -33,7 +35,7 @@ Accept: application/json
   "cantidad": 2
 }
 
-### 4. Cambiar cantidad de detalle (Accediendo al ID del detalle generado en el paso 3)
+### Cambiar la cantidad de la línea creada
 PUT {{baseUrl}}/api/ventas/{{crearVenta.response.body.$.id}}/detalles/{{agregarDetalle.response.body.$.detalles[0].id}}
 Content-Type: application/json
 Accept: application/json
@@ -42,7 +44,15 @@ Accept: application/json
   "nuevaCantidad": 3
 }
 
-### 5. Pagar venta
+### Consultar comanda abierta y total derivado
+GET {{baseUrl}}/api/ventas/{{crearVenta.response.body.$.id}}
+Accept: application/json
+
+### Listar el historial de ventas, desde la mas reciente
+GET {{baseUrl}}/api/ventas
+Accept: application/json
+
+### Cobrar la venta
 POST {{baseUrl}}/api/ventas/{{crearVenta.response.body.$.id}}/pagar
 Content-Type: application/json
 Accept: application/json
@@ -51,28 +61,58 @@ Accept: application/json
   "metodoPago": "Tarjeta"
 }
 
-### 6. Ver estado final de la venta (Debería estar Pagada y con Total)
+### Consultar resultado pagado
 GET {{baseUrl}}/api/ventas/{{crearVenta.response.body.$.id}}
 Accept: application/json
 
-#FLUJO ALTERNATIVO: CANCELAR VENTA
+### Intentar modificar una venta pagada (esperado: 409 ProblemDetails)
+POST {{baseUrl}}/api/ventas/{{crearVenta.response.body.$.id}}/detalles
+Content-Type: application/json
+Accept: application/problem+json
 
+{
+  "productoMenuId": "{{crearProducto.response.body.$.id}}",
+  "cantidad": 1
+}
 
-### 7. Crear otra venta exclusivamente para cancelarla
+### Abrir otra venta para cancelarla
 # @name crearVentaParaCancelar
 POST {{baseUrl}}/api/ventas
 Content-Type: application/json
 Accept: application/json
 
 {
-  "clienteId": "00000000-0000-0000-0000-000000000099",
+  "clienteId": "{{clienteId}}",
   "numeroMesa": 2
 }
 
-### 8. Cancelar la venta
+### Cancelar conservando motivo de auditoría
 POST {{baseUrl}}/api/ventas/{{crearVentaParaCancelar.response.body.$.id}}/cancelar
+Content-Type: application/json
 Accept: application/json
 
-### 9. Ver estado final de la venta cancelada
+{
+  "motivoCancelacion": "El cliente solicitó cancelar antes del cobro."
+}
+
+### Consultar resultado cancelado, fecha y motivo
 GET {{baseUrl}}/api/ventas/{{crearVentaParaCancelar.response.body.$.id}}
 Accept: application/json
+
+### Motivo faltante o vacío (esperado: 400 ProblemDetails)
+# @name crearVentaSinMotivo
+POST {{baseUrl}}/api/ventas
+Content-Type: application/json
+Accept: application/json
+
+{
+  "numeroMesa": 3
+}
+
+POST {{baseUrl}}/api/ventas/{{crearVentaSinMotivo.response.body.$.id}}/cancelar
+Content-Type: application/json
+Accept: application/problem+json
+
+{
+  "motivoCancelacion": ""
+}

@@ -8,6 +8,8 @@ public sealed class Dinero : IEquatable<Dinero>
     public const string CodigoMonedaInvalida = "Dinero.MonedaInvalida";
     public const string CodigoMonedaDistinta = "Dinero.MonedaDistinta";
     public const string MonedaUsd = "USD";
+    public const int DecimalesMaximos = 2;
+    public const decimal MontoMaximo = 999_999_999_999_999.99m;
 
     public decimal Monto { get; }
     public string Moneda { get; }
@@ -20,10 +22,13 @@ public sealed class Dinero : IEquatable<Dinero>
 
     public static Resultado<Dinero> Crear(decimal monto, string moneda = MonedaUsd)
     {
-        if (monto <= 0)
+        if (monto <= 0 || monto > MontoMaximo ||
+            decimal.Round(monto, DecimalesMaximos, MidpointRounding.ToZero) != monto)
         {
             return Resultado<Dinero>.Fallo(
-                new Error(CodigoMontoInvalido, "El monto debe ser mayor que cero."));
+                new Error(
+                    CodigoMontoInvalido,
+                    $"El monto debe ser mayor que cero, no superar {MontoMaximo} y tener hasta {DecimalesMaximos} decimales."));
         }
 
         if (!string.Equals(moneda, MonedaUsd, StringComparison.OrdinalIgnoreCase))

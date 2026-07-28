@@ -12,8 +12,11 @@ public sealed class ResultadoAplicacion<T> : ResultadoAplicacion
 
     public static ResultadoAplicacion<T> Exito(T valor) => new(valor);
 
-    public new static ResultadoAplicacion<T> Fallo(string codigo, string mensaje) =>
-        new(new ErrorAplicacion(codigo, mensaje));
+    public new static ResultadoAplicacion<T> Fallo(
+        string codigo,
+        string mensaje,
+        TipoErrorAplicacion tipo = TipoErrorAplicacion.Validacion) =>
+        new(new ErrorAplicacion(codigo, mensaje, tipo));
 
     public new static ResultadoAplicacion<T> Fallo(ErrorAplicacion error) => new(error);
 }

@@ -9,7 +9,15 @@ public sealed class ProductoMenuConfiguracion : IEntityTypeConfiguration<Product
 {
     public void Configure(EntityTypeBuilder<ProductoMenu> constructor)
     {
-        constructor.ToTable("productos_menu");
+        constructor.ToTable("productos_menu", tabla =>
+        {
+            tabla.HasCheckConstraint(
+                "CK_productos_menu_nombre_no_vacio",
+                "length(btrim(\"nombre\")) > 0");
+            tabla.HasCheckConstraint(
+                "CK_productos_menu_precio_positivo",
+                "\"precio_monto\" > 0");
+        });
 
         constructor.HasKey(producto => producto.Id);
 
@@ -35,6 +43,9 @@ public sealed class ProductoMenuConfiguracion : IEntityTypeConfiguration<Product
         constructor.Property(producto => producto.EstaActivo)
             .HasColumnName("esta_activo")
             .IsRequired();
+
+        constructor.HasIndex(producto => new { producto.EstaActivo, producto.Nombre })
+            .HasDatabaseName("IX_productos_menu_activo_nombre");
 
         constructor.Ignore(producto => producto.Eventos);
     }

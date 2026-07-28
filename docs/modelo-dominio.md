@@ -1,69 +1,101 @@
-# Modelo de dominio — RestauranteVentas
+# Modelo de dominio
 
-## Objetivo
+## Lenguaje ubicuo
 
-Gestionar las ventas del restaurante mediante un núcleo de dominio puro que encapsula las reglas de negocio, los estados de una venta y los eventos relevantes del ciclo de vida.
+| Término | Significado en este proyecto |
+|---|---|
+| **Venta abierta** | Nombre público del agregado mientras el consumo está en curso. Semánticamente equivale a una **comanda abierta**. |
+| **Venta pagada** | La misma venta después de un cobro definitivo; representa el consumo cerrado. |
+| **Detalle de venta** | Línea interna de la venta que conserva producto, nombre, precio y cantidad del consumo. |
+| **Producto de menú** | Elemento del catálogo con precio vigente y disponibilidad. |
+| **Snapshot histórico** | Copia de nombre y precio del producto que se guarda en el detalle al agregarlo. |
+| **Pago** | Transición única de `Abierta` a `Pagada` mediante un método válido. |
+| **Cancelación** | Transición única de `Abierta` a `Cancelada`, con fecha y motivo auditables. |
 
-## Entidades
+El nombre `Venta` se conserva en las clases, rutas y DTOs actuales. No significa que se esté modelando una venta ya cobrada desde el primer momento: la máquina de estados representa explícitamente la comanda en curso.
 
-| Entidad | Descripción |
-|---------|-------------|
-| **Venta** | Agregado principal. Representa una venta con detalles, estado, fechas y método de pago. |
-| **DetalleVenta** | Línea de una venta con nombre y precio históricos del producto. |
-| **ProductoMenu** | Producto del menú con nombre, precio actual y estado activo/inactivo. |
+## Agregados y entidades
+
+| Tipo | Rol | Responsabilidad |
+|---|---|---|
+| `Venta` | Aggregate root | Controla detalles, estados, pago, cancelación, total y eventos de su ciclo de vida. |
+| `DetalleVenta` | Entidad interna | Tiene identidad propia porque su cantidad puede cambiar individualmente. No se modifica fuera de `Venta`. |
+| `ProductoMenu` | Aggregate root | Controla nombre, precio actual y estado activo/inactivo del catálogo. |
+
+`Venta` comienza con **cero o más** detalles. El requisito de tener al menos una línea aplica al pago, no a la creación. Por esa razón sería incorrecto declarar una relación obligatoria `1..*` desde el momento de apertura.
 
 ## Value Objects
 
-| Value Object | Regla |
-|--------------|-------|
-| **Dinero** | Monto mayor que cero; moneda USD. Permite sumar y multiplicar por cantidad. |
-| **Cantidad** | Entero mayor que cero. |
-| **NumeroMesa** | Entero mayor que cero. |
-| **NombreProducto** | No vacío; longitud máxima 100 caracteres. |
+| Value Object | Invariante |
+|---|---|
+| `Dinero` | Monto mayor que cero; moneda fija USD; operaciones de suma y multiplicación controladas. |
+| `Cantidad` | Entero mayor que cero. |
+| `NumeroMesa` | Entero mayor que cero. |
+| `NombreProducto` | No vacío y con máximo de 100 caracteres. |
 
-## Reglas de negocio
+Estos tipos no poseen identidad propia. Evitan que valores primitivos inválidos se propaguen hasta el agregado.
 
-1. Una venta puede no tener mesa, cliente o ambos.
-2. La moneda usada es **USD**.
-3. Una venta debe contener por lo menos un detalle para poder pagarse.
-4. Una venta **abierta** permite agregar, cambiar o eliminar detalles.
-5. Una venta **pagada** no puede modificarse ni cancelarse.
-6. Una venta **cancelada** no puede modificarse ni pagarse.
-7. Cada detalle conserva el **nombre** y **precio unitario histórico** del producto.
-8. Un producto **inactivo** no puede agregarse a una venta nueva.
-9. El precio debe ser positivo y la cantidad mayor que cero.
-10. El **total** se calcula desde los detalles; nunca se asigna manualmente.
-11. Una venta se paga en una sola operación: **efectivo**, **tarjeta** o **transferencia**.
-12. Al crear, pagar o cancelar una venta se produce un **evento de dominio**.
+## Invariantes implementadas
 
-## Estados permitidos de una venta
+### Creación
+
+- El identificador de venta no puede ser `Guid.Empty`.
+- `ClienteId` es opcional; si se proporciona, no puede ser `Guid.Empty`.
+- La fecha de creación debe ser UTC y distinta de `default(DateTime)`.
+- Mesa es opcional; cuando existe, la valida `NumeroMesa`.
+- La venta se crea siempre en estado `Abierta` y registra `VentaCreadaEventoDominio`.
+
+### Detalles
+
+- Solo una venta `Abierta` puede agregar, cambiar cantidad o eliminar un detalle.
+- Producto y cantidad son obligatorios.
+- Un producto inactivo no puede agregarse.
+- Cada detalle toma `ProductoMenuId`, `NombreHistorico` y `PrecioUnitarioHistorico` al agregarlo.
+- El total es derivado de los detalles; con cero detalles es `null` y no un importe que el cliente pueda asignar manualmente.
+
+La implementación actual agrega una línea por cada solicitud de agregar producto. Cualquier consolidación de productos repetidos o protección contra reintentos HTTP debe modelarse y probarse explícitamente; no se asume de forma implícita.
+
+### Pago
+
+- Solo puede pagarse una venta abierta con al menos un detalle.
+- El método debe ser `Efectivo`, `Tarjeta` o `Transferencia`.
+- La fecha de pago debe ser UTC, distinta de `default(DateTime)` y estrictamente posterior a `FechaCreacionUtc`.
+- El pago conserva `MetodoPago`, `FechaPagoUtc` y registra `VentaPagadaEventoDominio` con el total y método de pago.
+
+### Cancelación
+
+- Una venta pagada no puede cancelarse; una cancelada no puede volver a cancelarse ni modificarse.
+- La fecha de cancelación debe ser UTC, distinta de `default(DateTime)` y estrictamente posterior a `FechaCreacionUtc`.
+- El motivo es obligatorio, se recorta, no puede quedar vacío y su longitud máxima es 500 caracteres.
+- Se persisten `FechaCancelacionUtc` y `MotivoCancelacion` como parte de la auditoría de negocio.
+- La transición registra `VentaCanceladaEventoDominio` con motivo y fecha.
+
+## Estados
 
 ```mermaid
 stateDiagram-v2
-    [*] --> Abierta
-    Abierta --> Pagada : Pagar
-    Abierta --> Cancelada : Cancelar
+    [*] --> Abierta: Crear
+    Abierta --> Pagada: Pagar [detalles + método + fecha UTC válida]
+    Abierta --> Cancelada: Cancelar [motivo + fecha UTC válida]
     Pagada --> [*]
     Cancelada --> [*]
 ```
 
-- **Abierta**: admite modificaciones de detalles y puede pagarse o cancelarse.
-- **Pagada**: estado final; no admite más cambios.
-- **Cancelada**: estado final; no admite pago ni modificaciones.
+| Estado | Cambios permitidos | Datos finales |
+|---|---|---|
+| `Abierta` | Agregar, cambiar y eliminar detalles; pagar; cancelar. | Puede no tener detalles ni total. |
+| `Pagada` | Ninguno. | Método, fecha de pago y total histórico. |
+| `Cancelada` | Ninguno. | Fecha y motivo de cancelación. |
 
 ## Eventos de dominio
 
-| Evento | Cuándo se registra |
-|--------|-------------------|
-| `VentaCreadaEventoDominio` | Al crear una venta exitosamente. |
-| `VentaPagadaEventoDominio` | Al pagar una venta exitosamente. |
-| `VentaCanceladaEventoDominio` | Al cancelar una venta exitosamente. |
+| Evento | Hecho descrito | Datos relevantes |
+|---|---|---|
+| `VentaCreadaEventoDominio` | Se abrió una venta/comanda. | `EventoId`, `VentaId`, `FechaCreacionUtc`, `OcurridoEnUtc`. |
+| `VentaPagadaEventoDominio` | Se cerró mediante cobro. | `EventoId`, `VentaId`, `Total`, `MetodoPago`, `FechaPagoUtc`, `OcurridoEnUtc`. |
+| `VentaCanceladaEventoDominio` | Se canceló una comanda abierta. | `EventoId`, `VentaId`, `MotivoCancelacion`, `FechaCancelacionUtc`, `OcurridoEnUtc`. |
 
-Cada evento incluye al menos `VentaId` y `FechaUtc`.
-
-## Sin dependencias externas
-
-El proyecto `RestauranteVentas.Dominio` **no referencia** otros proyectos ni paquetes NuGet. Las abstracciones (`Entidad`, `IEventoDominio`, `Resultado`, `Error`) y las reglas de negocio viven íntegramente en el dominio, lo que permite que Application, Infrastructure, API y Aspire se conecten sobre un núcleo estable y probado.
+Cada evento tiene un `EventoId` estable para permitir consumidores idempotentes y un instante UTC de ocurrencia. El mecanismo de persistencia/despacho de esos eventos se documenta en [Arquitectura](arquitectura.md#eventos-de-dominio-y-outbox); registrar un evento y publicarlo de forma confiable son responsabilidades distintas.
 
 ## Diagrama de clases
 
@@ -74,7 +106,12 @@ classDiagram
         +Guid? ClienteId
         +NumeroMesa? Mesa
         +EstadoVenta Estado
+        +DateTime FechaCreacionUtc
+        +DateTime? FechaPagoUtc
+        +DateTime? FechaCancelacionUtc
+        +string? MotivoCancelacion
         +IReadOnlyCollection Detalles
+        +Dinero? Total
         +AgregarProducto()
         +CambiarCantidad()
         +EliminarDetalle()
@@ -83,6 +120,7 @@ classDiagram
     }
 
     class DetalleVenta {
+        +Guid Id
         +Guid ProductoMenuId
         +NombreProducto NombreHistorico
         +Dinero PrecioUnitarioHistorico
@@ -95,18 +133,25 @@ classDiagram
         +NombreProducto Nombre
         +Dinero PrecioActual
         +bool EstaActivo
+        +CambiarNombre()
+        +ActualizarPrecio()
         +Activar()
         +Desactivar()
-        +ActualizarPrecio()
     }
 
     class Dinero
     class Cantidad
     class NumeroMesa
 
-    Venta "1" *-- "1..*" DetalleVenta
+    Venta "1" *-- "0..*" DetalleVenta
     DetalleVenta --> Dinero
     DetalleVenta --> Cantidad
     Venta --> NumeroMesa
     ProductoMenu --> Dinero
 ```
+
+## Decisiones y límites
+
+- No hay inventario, reservas ni facturación tributaria dentro de este modelo.
+- Un producto de menú es independiente de los detalles históricos; cambiar el catálogo no reescribe ventas anteriores.
+- La elección de una sola comanda abierta por mesa no es una invariante implementada actualmente. Si el negocio la exige, necesita una regla transaccional y prueba de concurrencia, no solo una validación en memoria.

@@ -27,24 +27,25 @@ public sealed class PagarVentaHandler : IComandoHandler<PagarVentaComando, Resul
     {
         if (comando.VentaId == Guid.Empty)
         {
-            return ResultadoAplicacion<VentaDto>.Fallo(ErroresVenta.IdInvalido.Codigo, ErroresVenta.IdInvalido.Mensaje);
+            return ResultadoAplicacion<VentaDto>.Fallo(ErroresAplicacion.DesdeDominio(ErroresVenta.IdInvalido));
         }
 
         if (!Enum.TryParse<MetodoPago>(comando.MetodoPago, true, out var metodoPago))
         {
-            return ResultadoAplicacion<VentaDto>.Fallo(ErroresVenta.MetodoPagoInvalido.Codigo, ErroresVenta.MetodoPagoInvalido.Mensaje);
+            return ResultadoAplicacion<VentaDto>.Fallo(ErroresAplicacion.DesdeDominio(ErroresVenta.MetodoPagoInvalido));
         }
 
         var venta = await _repositorioVenta.ObtenerPorIdAsync(comando.VentaId, cancellationToken);
         if (venta is null)
         {
-            return ResultadoAplicacion<VentaDto>.Fallo("Venta.NoEncontrada", "La venta indicada no existe.");
+            return ResultadoAplicacion<VentaDto>.Fallo(
+                ErroresAplicacion.NoEncontrado("Venta.NoEncontrada", "La venta indicada no existe."));
         }
 
         var resultado = venta.Pagar(metodoPago, _reloj.UtcNow);
         if (!resultado.EsExito)
         {
-            return ResultadoAplicacion<VentaDto>.Fallo(resultado.Error!.Codigo, resultado.Error.Mensaje);
+            return ResultadoAplicacion<VentaDto>.Fallo(ErroresAplicacion.DesdeDominio(resultado.Error!));
         }
 
         await _unidadDeTrabajo.GuardarCambiosAsync(cancellationToken);

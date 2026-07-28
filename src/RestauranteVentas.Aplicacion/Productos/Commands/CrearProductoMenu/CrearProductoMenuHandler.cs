@@ -29,13 +29,13 @@ public sealed class CrearProductoMenuHandler : IComandoHandler<CrearProductoMenu
         var resultadoNombre = NombreProducto.Crear(comando.Nombre);
         if (!resultadoNombre.EsExito)
         {
-            return ResultadoAplicacion<ProductoMenuDto>.Fallo(resultadoNombre.Error!.Codigo, resultadoNombre.Error.Mensaje);
+            return ResultadoAplicacion<ProductoMenuDto>.Fallo(ErroresAplicacion.DesdeDominio(resultadoNombre.Error!));
         }
 
         var resultadoPrecio = Dinero.Crear(comando.Precio);
         if (!resultadoPrecio.EsExito)
         {
-            return ResultadoAplicacion<ProductoMenuDto>.Fallo(resultadoPrecio.Error!.Codigo, resultadoPrecio.Error.Mensaje);
+            return ResultadoAplicacion<ProductoMenuDto>.Fallo(ErroresAplicacion.DesdeDominio(resultadoPrecio.Error!));
         }
 
         var resultadoProducto = ProductoMenu.Crear(
@@ -45,7 +45,7 @@ public sealed class CrearProductoMenuHandler : IComandoHandler<CrearProductoMenu
 
         if (!resultadoProducto.EsExito)
         {
-            return ResultadoAplicacion<ProductoMenuDto>.Fallo(resultadoProducto.Error!.Codigo, resultadoProducto.Error.Mensaje);
+            return ResultadoAplicacion<ProductoMenuDto>.Fallo(ErroresAplicacion.DesdeDominio(resultadoProducto.Error!));
         }
 
         var producto = resultadoProducto.Valor!;

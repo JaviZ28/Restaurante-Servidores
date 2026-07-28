@@ -9,7 +9,18 @@ public sealed class DetalleVentaConfiguracion : IEntityTypeConfiguration<Detalle
 {
     public void Configure(EntityTypeBuilder<DetalleVenta> constructor)
     {
-        constructor.ToTable("detalles_venta");
+        constructor.ToTable("detalles_venta", tabla =>
+        {
+            tabla.HasCheckConstraint(
+                "CK_detalles_venta_cantidad_positiva",
+                "\"cantidad\" > 0");
+            tabla.HasCheckConstraint(
+                "CK_detalles_venta_precio_unitario_positivo",
+                "\"precio_unitario_monto\" > 0");
+            tabla.HasCheckConstraint(
+                "CK_detalles_venta_nombre_historico_no_vacio",
+                "length(btrim(\"nombre_historico\")) > 0");
+        });
 
         constructor.HasKey(detalle => detalle.Id);
 

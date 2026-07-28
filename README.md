@@ -1,149 +1,187 @@
-# RestauranteVentas — Dominio + Application (CQRS)
+# RestauranteVentas
 
-Implementación del núcleo de negocio y de la capa de aplicación para la gestión de ventas de un restaurante, construida con DDD (Domain-Driven Design), CQRS y .NET 10.
+Sistema de gestión de consumo y cobro para un restaurante, construido como un monolito modular en .NET 10. El proyecto usa DDD para proteger las reglas de negocio, CQRS para separar intención de cambio y lectura, PostgreSQL para persistencia y .NET Aspire para la experiencia local y las pruebas de integración.
 
-## Estado actual
+> **Nota de lenguaje:** el agregado se llama `Venta` en el código y en la API. Mientras está en estado `Abierta`, su semántica de negocio es la de una **comanda abierta**: puede recibir, modificar o quitar líneas. Al pagarse, representa el consumo cobrado. El nombre público se conserva para no introducir una ruptura de contrato prematura.
 
-- `RestauranteVentas.Dominio` concentra reglas de negocio puras (sin infraestructura).
-- `RestauranteVentas.Aplicacion` orquesta casos de uso con Commands, Queries y Handlers.
-- `RestauranteVentas.Infrastructure` implementa EF Core, PostgreSQL, repositorios y unidad de trabajo.
-- `RestauranteVentas.Api` expone los casos de uso mediante Minimal APIs y aplica las migraciones al iniciar.
-- `RestauranteVentas.AppHost` orquesta la API y PostgreSQL con .NET Aspire.
-- El mapeo de entidades a DTOs se realiza de forma manual.
-- Se incluyen pruebas unitarias y pruebas de integración con `Aspire.Hosting.Testing`.
-- Se incluyen archivos `.http` para probar todos los endpoints definidos.
+## Alcance
 
-## Características principales
+El sistema cubre:
 
-- Gestión del agregado `Venta` y sus detalles.
-- Productos de menú activos o inactivos.
-- Value Objects inmutables para dinero, cantidades, mesas y nombres de producto.
-- Estados de venta: `Abierta`, `Pagada` y `Cancelada`.
-- Conservación de nombre y precio históricos en cada detalle de venta.
-- Eventos de dominio al crear, pagar y cancelar una venta.
-- Resultados explícitos (`Resultado`, `Resultado<T>`, `ResultadoAplicacion<T>`) para manejar reglas y validaciones.
-- Interfaces de repositorio asíncronas y unidad de trabajo para persistencia desacoplada.
+- Catálogo básico de productos de menú.
+- Apertura de una venta/comanda con mesa y cliente opcionales.
+- Registro, modificación y eliminación de detalles.
+- Cobro único mediante efectivo, tarjeta o transferencia.
+- Cancelación de una venta abierta.
+- Conservación del nombre y precio que tenían los productos al agregarse.
 
-## Reglas de negocio
+Quedan fuera de alcance deliberadamente: inventario, reservas, cocina, delivery, promociones, facturación tributaria, gestión integral de clientes, autenticación y autorización. No son omisiones accidentales: no se añadieron reglas ficticias para aparentar un dominio más grande.
 
-- Una venta puede crearse sin cliente, mesa o ambos.
-- La moneda permitida es USD y los montos deben ser mayores que cero.
-- Una venta necesita al menos un detalle para poder pagarse.
-- Solo una venta abierta puede agregar, cambiar o eliminar detalles.
-- Una venta pagada o cancelada no puede modificarse.
-- Un producto inactivo no puede agregarse a una venta.
-- El total se calcula a partir de los detalles y nunca se asigna manualmente.
-- El pago se realiza una única vez mediante efectivo, tarjeta o transferencia.
+## Estado de la solución
 
-La descripción completa del modelo de dominio está disponible en [docs/modelo-dominio.md](docs/modelo-dominio.md).
+| Capacidad | Estado documentado |
+|---|---|
+| Modelo de dominio | Agregados `Venta` y `ProductoMenu`, entidades internas, Value Objects e invariantes de ciclo de vida. |
+| Clean Architecture | Dominio independiente; Application define casos de uso; Infrastructure implementa persistencia; API compone y expone HTTP. |
+| CQRS | Commands, queries y handlers separados; las queries usan puertos de lectura con proyecciones EF Core `AsNoTracking` a DTOs. |
+| Eventos de dominio | Las entidades registran eventos y EF Core los persiste en una outbox dentro de la misma confirmación de cambios. |
+| Persistencia | EF Core 10 + PostgreSQL + migraciones. |
+| Operación local | AppHost de Aspire, PostgreSQL, pgAdmin, health checks y `ServiceDefaults`. |
+| Pruebas | Verificación final desde una base limpia: **95/95** (62 Dominio, 22 Application, 4 arquitectura y 7 integración). |
 
-## CQRS en Application
+## Arquitectura
 
-### Commands implementados
+```mermaid
+flowchart TB
+    Api["API · Minimal APIs"] --> App["Application · Commands, Queries, Handlers, DTOs"]
+    App --> Domain["Dominio · Agregados, entidades, Value Objects, eventos"]
+    Api --> Infra["Infrastructure · EF Core, repositorios, unidad de trabajo"]
+    Infra --> Domain
+    Infra --> Db[(PostgreSQL)]
+    AppHost[".NET Aspire AppHost"] --> Api
+    AppHost --> Db
+```
 
-- `CrearProductoMenuComando`
-- `CrearVentaComando`
-- `AgregarProductoVentaComando`
-- `CambiarCantidadDetalleVentaComando`
-- `EliminarDetalleVentaComando`
-- `PagarVentaComando`
-- `CancelarVentaComando`
+Las dependencias permitidas apuntan hacia el núcleo:
 
-### Queries implementadas
+- `Dominio` no referencia otros proyectos ni dependencias técnicas.
+- `Aplicacion` referencia únicamente `Dominio` y expresa los puertos necesarios.
+- `Infrastructure` implementa repositorios, puertos de lectura, unidad de trabajo y adaptadores técnicos de reloj/identidad.
+- `Api` traduce HTTP a casos de uso y registra dependencias.
+- `AppHost` orquesta recursos locales; no contiene reglas de negocio.
 
-- `ObtenerProductoMenuPorIdConsulta`
-- `ObtenerVentaPorIdConsulta`
+El detalle completo está en [Arquitectura](docs/arquitectura.md) y el vocabulario e invariantes en [Modelo de dominio](docs/modelo-dominio.md).
 
-### Contratos de aplicación
+## Contextos delimitados
 
-- Interfaces base CQRS: `IComando`, `IConsulta`, `IComandoHandler`, `IConsultaHandler`.
-- Orquestación transaccional: `IUnidadDeTrabajo`.
-- Dependencias temporales/identidad desacopladas: `IReloj`, `IGeneradorIdentidad`.
-- DTOs de salida y mapeadores manuales.
+```mermaid
+flowchart LR
+    Catalogo["Catálogo de menú\nProductoMenu"] -->|"producto activo, nombre y precio vigentes"| Cobro["Comandas y cobro\nVenta / DetalleVenta"]
+    Cobro -->|"snapshot histórico de nombre y precio"| Historial["Consumo cobrado o cancelado"]
+```
 
-## Estructura
+Son contextos delimitados dentro de un mismo proceso. No son microservicios: se despliegan y evolucionan juntos mientras el problema no justifique distribución.
+
+## Reglas de negocio principales
+
+- La moneda es USD y los importes/cantidades/números de mesa válidos son positivos.
+- Una venta se crea abierta; puede no tener cliente ni mesa.
+- Solo una venta abierta admite cambios de detalles.
+- Para pagar se requiere al menos un detalle y un método de pago válido.
+- Una venta pagada o cancelada es terminal y no admite nuevas modificaciones.
+- Un producto inactivo no puede agregarse.
+- El total se deriva de los detalles; no se persiste ni asigna manualmente como una entrada independiente.
+- Cada detalle guarda el nombre y el precio unitario históricos del producto, de modo que el menú puede cambiar sin alterar consumos anteriores.
+- Las fechas de creación, pago y cancelación son instantes UTC válidos; pago y cancelación deben ser posteriores a la creación.
+- Una cancelación requiere motivo no vacío, normalizado, de hasta 500 caracteres, y conserva su fecha para auditoría.
+
+Consulte las reglas, estados y decisiones de nomenclatura en [docs/modelo-dominio.md](docs/modelo-dominio.md).
+
+## CQRS, sin promesas exageradas
+
+```mermaid
+sequenceDiagram
+    participant C as Cliente HTTP
+    participant API as API
+    participant H as Handler Application
+    participant A as Agregado
+    participant R as Repositorio/UoW
+    participant DB as PostgreSQL
+
+    C->>API: Command o Query
+    API->>H: DTO HTTP → contrato Application
+    alt Command
+        H->>R: Cargar/agregar agregado
+        H->>A: Ejecutar regla de negocio
+        H->>R: Guardar cambios
+        R->>DB: Transacción de persistencia
+    else Query
+        H->>R: Obtener datos
+        R->>DB: Lectura
+        H-->>API: DTO de salida
+    end
+    API-->>C: Respuesta HTTP
+```
+
+CQRS aquí significa separar operaciones de cambio (`Commands`) y operaciones de lectura (`Queries`) en contratos y handlers distintos. Los comandos trabajan con agregados; las queries usan puertos de lectura e implementaciones EF Core que proyectan a DTOs con `AsNoTracking`. No implica, por sí mismo, dos bases de datos, Event Sourcing, MediatR ni microservicios. La situación y evolución del modelo de lectura se explican en [docs/arquitectura.md](docs/arquitectura.md).
+
+## Eventos de dominio y outbox
+
+`Venta` registra eventos al crearse, pagarse o cancelarse. Al confirmar una unidad de trabajo, el `DbContext` persiste mensajes de outbox junto con el cambio de estado y limpia los eventos del agregado solo después de guardar con éxito. `ProcesadorOutbox` reclama los mensajes con token y lease, deja una auditoría estructurada y marca éxito o programa reintento. La entrega es al menos una vez y el efecto actual es local; no se afirma un broker ni integración externa inexistentes.
+
+Véase [Eventos y outbox](docs/arquitectura.md#eventos-de-dominio-y-outbox) y el ADR correspondiente en [docs/adr/0004-eventos-y-outbox.md](docs/adr/0004-eventos-y-outbox.md).
+
+## Estructura del repositorio
 
 ```text
 src/
-├── RestauranteVentas.Dominio/
-│   ├── Abstracciones/   # Entidad, eventos, errores y resultados
-│   ├── Compartido/      # Value Objects
-│   ├── Productos/       # ProductoMenu y su repositorio
-│   └── Ventas/          # Agregado Venta, detalles y eventos
-└── RestauranteVentas.Aplicacion/
-    ├── Abstracciones/   # Contratos CQRS, resultado de app y unidad de trabajo
-    ├── Dtos/            # Contratos de salida
-    ├── Mapeadores/      # Mapeo manual Dominio -> DTO
-    ├── Productos/       # Commands/Queries/Handlers de productos
-    └── Ventas/          # Commands/Queries/Handlers de ventas
+├── RestauranteVentas.Dominio/          # Modelo y reglas de negocio puras
+├── RestauranteVentas.Aplicacion/       # Casos de uso CQRS, contratos y DTOs
+├── RestauranteVentas.Infrastructure/   # EF Core, PostgreSQL, repositorios y UoW
+└── RestauranteVentas.Api/              # Minimal APIs y composición
 
+RestauranteVentas.AppHost/              # Orquestación Aspire
+RestauranteVentas.ServiceDefaults/      # Telemetría y health checks compartidos
 tests/
 ├── RestauranteVentas.Dominio.Tests/
-│   ├── Compartido/
-│   ├── Productos/
-│   └── Ventas/
-└── RestauranteVentas.Aplicacion.Tests/
-    ├── Helpers/
-    ├── Productos/
-    └── Ventas/
-
+├── RestauranteVentas.Aplicacion.Tests/
+└── RestauranteVentas.IntegrationTests/
 docs/
-├── modelo-dominio.md
+├── adr/
 └── http/
-    ├── productos.http
-    └── ventas.http
 ```
 
-## Endpoints documentados (.http)
+## Requisitos
 
-- `POST /api/productos`
-- `GET /api/productos/{productoId}`
-- `POST /api/ventas`
-- `GET /api/ventas/{ventaId}`
-- `POST /api/ventas/{ventaId}/detalles`
-- `PUT /api/ventas/{ventaId}/detalles/{detalleId}`
-- `DELETE /api/ventas/{ventaId}/detalles/{detalleId}`
-- `POST /api/ventas/{ventaId}/pagar`
-- `POST /api/ventas/{ventaId}/cancelar`
+- SDK de .NET 10.
+- Docker Desktop iniciado para Aspire y las pruebas de integración.
+- La CLI de Aspire si se usará `aspire start`. Las pruebas no necesitan que el AppHost esté iniciado manualmente.
 
-## Tecnologías
+## Inicio rápido
 
-- .NET 10
-- C#
-- xUnit
-- Moq
-- Entity Framework Core 10
-- PostgreSQL
-- .NET Aspire
+Restaure y ejecute la suite completa desde la raíz:
 
-## Ejecutar las pruebas
-
-Desde la raíz del repositorio:
-
-```bash
-dotnet test RestauranteVentas.slnx
+```powershell
+dotnet restore RestauranteVentas.slnx
+dotnet test RestauranteVentas.slnx --configuration Release
 ```
 
-Estado actual: **55 pruebas** (53 unitarias y 2 de integración).
+Para levantar el entorno local con Aspire:
 
-## Ejecutar con Aspire
-
-Se requiere Docker en ejecución. Desde la raíz del repositorio:
-
-```bash
+```powershell
 aspire start --apphost RestauranteVentas.AppHost/RestauranteVentas.AppHost.csproj --non-interactive
 aspire wait api --non-interactive
 ```
 
-Aspire crea PostgreSQL y la API aplica la migración inicial al iniciar. Para detener el entorno:
+Al estar saludable, abra la URL de la API mostrada por Aspire y navegue a `/swagger` en entorno Development. Para detener el entorno:
 
-```bash
+```powershell
 aspire stop --non-interactive
 ```
 
+Los ejemplos HTTP ejecutables están en [docs/http/productos.http](docs/http/productos.http) y [docs/http/ventas.http](docs/http/ventas.http). Ajuste `@baseUrl` al puerto expuesto por Aspire si no usa el perfil local predeterminado.
+
+## Pruebas y verificación desde una base limpia
+
+La verificación final registrada el 28 de julio de 2026 ejecutó 95/95 casos correctos:
+
+| Proyecto | Tipo | Casos |
+|---|---|---:|
+| `RestauranteVentas.Dominio.Tests` | Unitarias de reglas, eventos y Value Objects | 62 |
+| `RestauranteVentas.Aplicacion.Tests` | Unitarias de handlers, commands y queries | 22 |
+| `RestauranteVentas.Arquitectura.Tests` | Dependencias permitidas entre capas | 4 |
+| `RestauranteVentas.IntegrationTests` | AppHost + PostgreSQL + API | 7 |
+| **Total** |  | **95** |
+
+Las integraciones crean el AppHost mediante `Aspire.Hosting.Testing` con `UseVolumes=false`; por ello validan un PostgreSQL efímero, aplican la migración al iniciar la API y no reutilizan el volumen persistente normal del entorno local. Docker debe estar iniciado.
+
+La misma verificación final confirmó compilación sin advertencias ni errores, ausencia de cambios de modelo pendientes en EF Core y cierre del AppHost al terminar las integraciones.
+
+La guía de diagnóstico y la limpieza explícita de datos locales están en [docs/operacion-y-pruebas.md](docs/operacion-y-pruebas.md). Borrar un volumen es destructivo y no debe hacerse sobre datos que deban conservarse.
+
 ## Migraciones
 
-La herramienta `dotnet-ef` está declarada en `dotnet-tools.json`. Antes de crear o verificar migraciones, configure una cadena de conexión local en `RESTAURANTEVENTAS_CONNECTION_STRING`:
+En entorno `Development`, la API ejecuta las migraciones al inicio para facilitar desarrollo y demostración local. Esa elección no sustituye un proceso de despliegue controlado en producción. Para inspeccionar el modelo durante desarrollo:
 
 ```powershell
 dotnet tool restore
@@ -151,8 +189,19 @@ $env:RESTAURANTEVENTAS_CONNECTION_STRING = "Host=localhost;Port=5432;Database=re
 dotnet tool run dotnet-ef migrations has-pending-model-changes --project src/RestauranteVentas.Infrastructure --context RestauranteVentasDbContext
 ```
 
-## Principios de arquitectura
+## Documentación de apoyo
 
-- `RestauranteVentas.Dominio` se mantiene puro y sin dependencias externas.
-- `RestauranteVentas.Aplicacion` depende del dominio para ejecutar casos de uso.
-- Infrastructure y API dependen de Application/Dominio, nunca al revés.
+- [Arquitectura y flujos](docs/arquitectura.md)
+- [Modelo de dominio](docs/modelo-dominio.md)
+- [Operación local, migraciones y pruebas](docs/operacion-y-pruebas.md)
+- [Contrato HTTP](docs/api.md)
+- [Decisiones arquitectónicas (ADRs)](docs/adr/README.md)
+- [Guía de defensa](docs/guia-defensa.md)
+
+## Calidad continua
+
+El repositorio incluye [`.editorconfig`](.editorconfig) para convenciones de codificación y [el workflow de CI](.github/workflows/ci.yml). En cada `push` y pull request, el workflow restaura, compila en `Release`, verifica Docker, ejecuta las pruebas de la solución y recoge cobertura en formato Cobertura. Esto incluye las integraciones de Aspire; no son pruebas que dependan de una base compartida del desarrollador.
+
+## Transparencia técnica
+
+La documentación diferencia capacidades implementadas de decisiones objetivo. La outbox transaccional, las proyecciones `AsNoTracking` y la concurrencia optimista deben tener siempre pruebas que respalden su afirmación. Aún requieren una decisión explícita antes de declararse completas: idempotencia de comandos HTTP e integración externa de los eventos más allá de la auditoría local. Esta distinción es intencional: una defensa sólida explica lo que el sistema hace hoy y no atribuye patrones que no estén implementados y probados.

@@ -13,8 +13,11 @@ public class ResultadoAplicacion
 
     public static ResultadoAplicacion Exito() => new(true, null);
 
-    public static ResultadoAplicacion Fallo(string codigo, string mensaje) =>
-        new(false, new ErrorAplicacion(codigo, mensaje));
+    public static ResultadoAplicacion Fallo(
+        string codigo,
+        string mensaje,
+        TipoErrorAplicacion tipo = TipoErrorAplicacion.Validacion) =>
+        new(false, new ErrorAplicacion(codigo, mensaje, tipo));
 
     public static ResultadoAplicacion Fallo(ErrorAplicacion error) => new(false, error);
 }

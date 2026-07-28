@@ -29,36 +29,38 @@ public sealed class AgregarProductoVentaHandler : IComandoHandler<AgregarProduct
     {
         if (comando.VentaId == Guid.Empty)
         {
-            return ResultadoAplicacion<VentaDto>.Fallo(ErroresVenta.IdInvalido.Codigo, ErroresVenta.IdInvalido.Mensaje);
+            return ResultadoAplicacion<VentaDto>.Fallo(ErroresAplicacion.DesdeDominio(ErroresVenta.IdInvalido));
         }
 
         if (comando.ProductoMenuId == Guid.Empty)
         {
-            return ResultadoAplicacion<VentaDto>.Fallo(ErroresProductoMenu.IdInvalido.Codigo, ErroresProductoMenu.IdInvalido.Mensaje);
+            return ResultadoAplicacion<VentaDto>.Fallo(ErroresAplicacion.DesdeDominio(ErroresProductoMenu.IdInvalido));
         }
 
         var resultadoCantidad = Cantidad.Crear(comando.Cantidad);
         if (!resultadoCantidad.EsExito)
         {
-            return ResultadoAplicacion<VentaDto>.Fallo(resultadoCantidad.Error!.Codigo, resultadoCantidad.Error.Mensaje);
+            return ResultadoAplicacion<VentaDto>.Fallo(ErroresAplicacion.DesdeDominio(resultadoCantidad.Error!));
         }
 
         var venta = await _repositorioVenta.ObtenerPorIdAsync(comando.VentaId, cancellationToken);
         if (venta is null)
         {
-            return ResultadoAplicacion<VentaDto>.Fallo("Venta.NoEncontrada", "La venta indicada no existe.");
+            return ResultadoAplicacion<VentaDto>.Fallo(
+                ErroresAplicacion.NoEncontrado("Venta.NoEncontrada", "La venta indicada no existe."));
         }
 
         var producto = await _repositorioProductoMenu.ObtenerPorIdAsync(comando.ProductoMenuId, cancellationToken);
         if (producto is null)
         {
-            return ResultadoAplicacion<VentaDto>.Fallo("ProductoMenu.NoEncontrado", "El producto indicado no existe.");
+            return ResultadoAplicacion<VentaDto>.Fallo(
+                ErroresAplicacion.NoEncontrado("ProductoMenu.NoEncontrado", "El producto indicado no existe."));
         }
 
         var resultado = venta.AgregarProducto(producto, resultadoCantidad.Valor);
         if (!resultado.EsExito)
         {
-            return ResultadoAplicacion<VentaDto>.Fallo(resultado.Error!.Codigo, resultado.Error.Mensaje);
+            return ResultadoAplicacion<VentaDto>.Fallo(ErroresAplicacion.DesdeDominio(resultado.Error!));
         }
 
         await _unidadDeTrabajo.GuardarCambiosAsync(cancellationToken);

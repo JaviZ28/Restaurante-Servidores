@@ -36,7 +36,7 @@ public sealed class CrearVentaHandler : IComandoHandler<CrearVentaComando, Resul
             var resultadoMesa = NumeroMesa.Crear(comando.NumeroMesa.Value);
             if (!resultadoMesa.EsExito)
             {
-                return FalloDominio(resultadoMesa.Error!.Codigo, resultadoMesa.Error.Mensaje);
+                return ResultadoAplicacion<VentaDto>.Fallo(ErroresAplicacion.DesdeDominio(resultadoMesa.Error!));
             }
 
             mesa = resultadoMesa.Valor!;
@@ -50,7 +50,7 @@ public sealed class CrearVentaHandler : IComandoHandler<CrearVentaComando, Resul
 
         if (!resultadoVenta.EsExito)
         {
-            return FalloDominio(resultadoVenta.Error!.Codigo, resultadoVenta.Error.Mensaje);
+            return ResultadoAplicacion<VentaDto>.Fallo(ErroresAplicacion.DesdeDominio(resultadoVenta.Error!));
         }
 
         var venta = resultadoVenta.Valor!;
@@ -59,7 +59,4 @@ public sealed class CrearVentaHandler : IComandoHandler<CrearVentaComando, Resul
 
         return ResultadoAplicacion<VentaDto>.Exito(venta.ADto());
     }
-
-    private static ResultadoAplicacion<VentaDto> FalloDominio(string codigo, string mensaje) =>
-        ResultadoAplicacion<VentaDto>.Fallo(codigo, mensaje);
 }

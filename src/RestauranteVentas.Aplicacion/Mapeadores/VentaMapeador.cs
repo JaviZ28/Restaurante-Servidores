@@ -17,7 +17,9 @@ public static class VentaMapeador
             venta.Estado.ToString(),
             venta.FechaCreacionUtc,
             venta.FechaPagoUtc,
+            venta.FechaCancelacionUtc,
             venta.MetodoPago?.ToString(),
+            venta.MotivoCancelacion,
             total?.Monto,
             total?.Moneda,
             detalles);

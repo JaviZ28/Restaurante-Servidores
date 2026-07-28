@@ -18,6 +18,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\RestauranteVentas.AppHost\RestauranteVentas.AppHost.csproj" />
+    <ProjectReference Include="..\..\src\RestauranteVentas.Infrastructure\RestauranteVentas.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>

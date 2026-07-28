@@ -5,6 +5,12 @@ public static class ErroresVenta
     public static readonly Abstracciones.Error IdInvalido =
         new("Venta.IdInvalido", "El identificador de la venta es obligatorio.");
 
+    public static readonly Abstracciones.Error ClienteIdInvalido =
+        new("Venta.ClienteIdInvalido", "El identificador del cliente no puede estar vacío.");
+
+    public static readonly Abstracciones.Error FechaCreacionInvalida =
+        new("Venta.FechaCreacionInvalida", "La fecha de creación debe ser un instante UTC válido.");
+
     public static readonly Abstracciones.Error ProductoInvalido =
         new("Venta.ProductoInvalido", "El producto es obligatorio.");
 
@@ -13,6 +19,21 @@ public static class ErroresVenta
 
     public static readonly Abstracciones.Error MetodoPagoInvalido =
         new("Venta.MetodoPagoInvalido", "El método de pago indicado no es válido.");
+
+    public static readonly Abstracciones.Error FechaPagoInvalida =
+        new("Venta.FechaPagoInvalida", "La fecha de pago debe ser un instante UTC válido.");
+
+    public static readonly Abstracciones.Error FechaPagoNoPosteriorACreacion =
+        new("Venta.FechaPagoNoPosteriorACreacion", "La fecha de pago debe ser posterior a la creación de la venta.");
+
+    public static readonly Abstracciones.Error FechaCancelacionInvalida =
+        new("Venta.FechaCancelacionInvalida", "La fecha de cancelación debe ser un instante UTC válido.");
+
+    public static readonly Abstracciones.Error FechaCancelacionNoPosteriorACreacion =
+        new("Venta.FechaCancelacionNoPosteriorACreacion", "La fecha de cancelación debe ser posterior a la creación de la venta.");
+
+    public static readonly Abstracciones.Error MotivoCancelacionInvalido =
+        new("Venta.MotivoCancelacionInvalido", "El motivo de cancelación es obligatorio y no puede superar los 500 caracteres.");
 
     public static readonly Abstracciones.Error VentaNoAbierta =
         new("Venta.NoAbierta", "La venta no está abierta.");

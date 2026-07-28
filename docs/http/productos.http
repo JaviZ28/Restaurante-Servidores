@@ -1,16 +1,57 @@
+# Ajuste este valor por la URL HTTP que muestre Aspire si no usa el perfil local.
 @baseUrl = http://localhost:5000
-@productoId = 36dacdba-4416-4046-b373-6adce71478b9
 
-### Crear producto de menu
+### Health check de la API
+GET {{baseUrl}}/health
+Accept: application/json
+
+### Crear producto de menú
+# @name crearProducto
 POST {{baseUrl}}/api/productos
 Content-Type: application/json
 Accept: application/json
 
 {
-  "nombre": "Milanesa napolitanass",
+  "nombre": "Milanesa napolitana",
   "precio": 25.50
 }
 
-### Obtener producto por id
-GET {{baseUrl}}/api/productos/{{productoId}}
+### Consultar el producto creado
+GET {{baseUrl}}/api/productos/{{crearProducto.response.body.$.id}}
 Accept: application/json
+
+### Listar todos los productos del catalogo
+GET {{baseUrl}}/api/productos
+Accept: application/json
+
+### Actualizar nombre y precio vigentes
+PUT {{baseUrl}}/api/productos/{{crearProducto.response.body.$.id}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "nombre": "Milanesa napolitana especial",
+  "precio": 27.00
+}
+
+### Desactivar el producto para futuras comandas
+PATCH {{baseUrl}}/api/productos/{{crearProducto.response.body.$.id}}/estado
+Content-Type: application/json
+Accept: application/json
+
+{
+  "estaActivo": false
+}
+
+### Reactivarlo
+PATCH {{baseUrl}}/api/productos/{{crearProducto.response.body.$.id}}/estado
+Content-Type: application/json
+Accept: application/json
+
+{
+  "estaActivo": true
+}
+
+### Error de recurso inexistente (esperado: 404 ProblemDetails)
+GET {{baseUrl}}/api/productos/00000000-0000-0000-0000-000000000001
+Accept: application/problem+json

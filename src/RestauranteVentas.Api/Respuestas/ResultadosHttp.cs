@@ -14,14 +14,23 @@ public static class ResultadosHttp
         }
 
         var error = resultado.Error!;
-        var estado = error.Codigo.EndsWith("NoEncontrada", StringComparison.Ordinal) ||
-                     error.Codigo.EndsWith("NoEncontrado", StringComparison.Ordinal)
-            ? StatusCodes.Status404NotFound
-            : StatusCodes.Status400BadRequest;
+        var estado = error.Tipo switch
+        {
+            TipoErrorAplicacion.NoEncontrado => StatusCodes.Status404NotFound,
+            TipoErrorAplicacion.Conflicto => StatusCodes.Status409Conflict,
+            TipoErrorAplicacion.ReglaNegocio => StatusCodes.Status422UnprocessableEntity,
+            _ => StatusCodes.Status400BadRequest
+        };
 
         return Results.Problem(
             statusCode: estado,
             title: error.Codigo,
-            detail: error.Mensaje);
+            detail: error.Mensaje,
+            type: $"https://httpstatuses.com/{estado}",
+            extensions: new Dictionary<string, object?>
+            {
+                ["codigo"] = error.Codigo,
+                ["categoria"] = error.Tipo.ToString()
+            });
     }
 }

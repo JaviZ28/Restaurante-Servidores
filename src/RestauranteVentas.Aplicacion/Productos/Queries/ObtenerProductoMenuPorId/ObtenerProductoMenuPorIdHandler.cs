@@ -1,16 +1,16 @@
 using RestauranteVentas.Aplicacion.Abstracciones;
 using RestauranteVentas.Aplicacion.Dtos;
-using RestauranteVentas.Aplicacion.Mapeadores;
 using RestauranteVentas.Dominio.Productos;
+using RestauranteVentas.Aplicacion.Productos.Queries;
 
 namespace RestauranteVentas.Aplicacion.Productos.Queries.ObtenerProductoMenuPorId;
 
 public sealed class ObtenerProductoMenuPorIdHandler : IConsultaHandler<ObtenerProductoMenuPorIdConsulta, ResultadoAplicacion<ProductoMenuDto>>
 {
-    private readonly IRepositorioProductoMenu _repositorioProductoMenu;
+    private readonly IProductoMenuLectura _lecturaProductoMenu;
 
-    public ObtenerProductoMenuPorIdHandler(IRepositorioProductoMenu repositorioProductoMenu) =>
-        _repositorioProductoMenu = repositorioProductoMenu;
+    public ObtenerProductoMenuPorIdHandler(IProductoMenuLectura lecturaProductoMenu) =>
+        _lecturaProductoMenu = lecturaProductoMenu;
 
     public async Task<ResultadoAplicacion<ProductoMenuDto>> ManejarAsync(
         ObtenerProductoMenuPorIdConsulta consulta,
@@ -18,15 +18,16 @@ public sealed class ObtenerProductoMenuPorIdHandler : IConsultaHandler<ObtenerPr
     {
         if (consulta.ProductoMenuId == Guid.Empty)
         {
-            return ResultadoAplicacion<ProductoMenuDto>.Fallo(ErroresProductoMenu.IdInvalido.Codigo, ErroresProductoMenu.IdInvalido.Mensaje);
+            return ResultadoAplicacion<ProductoMenuDto>.Fallo(ErroresAplicacion.DesdeDominio(ErroresProductoMenu.IdInvalido));
         }
 
-        var producto = await _repositorioProductoMenu.ObtenerPorIdAsync(consulta.ProductoMenuId, cancellationToken);
+        var producto = await _lecturaProductoMenu.ObtenerPorIdAsync(consulta.ProductoMenuId, cancellationToken);
         if (producto is null)
         {
-            return ResultadoAplicacion<ProductoMenuDto>.Fallo("ProductoMenu.NoEncontrado", "El producto indicado no existe.");
+            return ResultadoAplicacion<ProductoMenuDto>.Fallo(
+                ErroresAplicacion.NoEncontrado("ProductoMenu.NoEncontrado", "El producto indicado no existe."));
         }
 
-        return ResultadoAplicacion<ProductoMenuDto>.Exito(producto.ADto());
+        return ResultadoAplicacion<ProductoMenuDto>.Exito(producto);
     }
 }

@@ -7,7 +7,9 @@ public sealed record VentaDto(
     string Estado,
     DateTime FechaCreacionUtc,
     DateTime? FechaPagoUtc,
+    DateTime? FechaCancelacionUtc,
     string? MetodoPago,
+    string? MotivoCancelacion,
     decimal? Total,
     string? MonedaTotal,
     IReadOnlyCollection<DetalleVentaDto> Detalles);
